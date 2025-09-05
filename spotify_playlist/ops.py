@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any, List, Optional, Protocol, TypedDict, cast
 
-from spotipy import Spotify
+ 
 
 from .core import to_batches
 
@@ -150,7 +150,10 @@ def remove_items_older_than(sp: RetentionClient, playlist_id: str, days: int) ->
         {"uri": uri, "positions": pos} for uri, pos in positions_by_uri.items()
     ]
     for chunk in to_batches(payload, 50):
-        sp.playlist_remove_specific_occurrences_of_items(playlist_id, chunk)  # type: ignore
+        sp.playlist_remove_specific_occurrences_of_items(
+            playlist_id,
+            chunk,
+        )
         total_removed += sum(len(entry["positions"]) for entry in chunk)
     return total_removed
 
