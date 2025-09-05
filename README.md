@@ -1,13 +1,16 @@
 # Spotify Playlist App (Python CLI)
 
-Create Spotify playlists from Python using Spotipy. Provide a list of search queries or track URLs/URIs and this tool creates a playlist and adds the tracks.
+Automate a rolling Spotify playlist with the songs played on DR P3 each day.
+This tool discovers all P3 program playlist pages for a given date, extracts
+tracks, resolves them on Spotify, and appends them to your rolling playlist.
+It can also remove items older than N days to keep the list fresh.
 
 ## Prerequisites
 
 - Python 3.9+
 - A Spotify Developer application
   - Create one at https://developer.spotify.com/dashboard
-  - Add a Redirect URI (e.g. `http://localhost:8888/callback`)
+  - Add a Redirect URI (e.g. `http://127.0.0.1:8888/callback`)
 
 ## Setup
 
@@ -27,50 +30,57 @@ pip install -r requirements.txt
 
 ## Usage
 
-Provide input as either a text file with one line per query/URI, or pass queries directly.
-
-Examples:
+Rolling P3 playlist (recommended):
 
 ```bash
-# From a file of queries (artist + track names), one per line
-python create_playlist.py -n "My Fresh Finds" -f songs.txt
+# One-time (create playlist, make it public)
+python create_playlist.py \
+  -n "P3 (Updated daily)" \
+  --public \
+  --from-dr-day p3 $(date +%F) \
+  --keep-duplicates --skip-existing --retention-days 7 -m 300
 
-# Direct queries on the command line
-python create_playlist.py -n "Gym Mix" -q "The Weeknd - Blinding Lights" "daft punk one more time"
-
-# Mix of direct Spotify URLs and queries
-python create_playlist.py -n "Mixed" -q \
-  "https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b" \
-  "Tame Impala - The Less I Know The Better"
-
-# Create a public playlist
-python create_playlist.py -n "Public List" --public -q "nirvana - lithium"
+# Daily append (use the playlist by name)
+python create_playlist.py \
+  --append-to-name "P3 (Updated daily)" \
+  --from-dr-day p3 $(date +%F) \
+  --keep-duplicates --skip-existing --retention-days 7 -m 300
 ```
 
 On first run, a browser window opens to authorize the app. After approving, tokens are cached in `.cache` (or your custom `--cache` path).
 
-## Input file format
+## Automate on Raspberry Pi
 
-- One query per line
-- Lines starting with `#` are ignored
-- Each line can be:
-  - A free-text search like `artist - track`
-  - A Spotify track URL/URI like `https://open.spotify.com/track/...` or `spotify:track:...`
+Use cron to run it once per day. Example crontab (runs at 23:59 daily):
+
+```
+# Edit with: crontab -e
+SHELL=/bin/bash
+* 23 * * * cd /home/pi/spotify-playlist-app && \
+  /home/pi/spotify-playlist-app/.venv/bin/python create_playlist.py \
+  --append-to-name "P3 (Updated daily)" \
+  --from-dr-day p3 $(date +\%F) \
+  --keep-duplicates --skip-existing --retention-days 7 -m 300 \
+  >> cron.log 2>&1
+```
+
+Notes for Pi:
+- First run requires authorizing the Spotify app. If headless, you can run the
+  tool on a laptop once to generate `.cache`, then copy that file to the Pi.
+- If you later change scopes, delete `.cache` and re-authorize once.
 
 ## Notes
 
-- Scopes requested: `playlist-modify-private`, `playlist-modify-public`, `ugc-image-upload`.
-- The script resolves free-text queries to the top search result. If you need precise versions, use Spotify track URLs/URIs.
-- Rate limits: adding tracks is batched to 100 per request to respect API limits.
+- Scopes requested:
+  - `playlist-modify-private`, `playlist-modify-public`
+  - `playlist-read-private`, `playlist-read-collaborative`
+  - `ugc-image-upload`, `user-library-read`
+- The script resolves free-text queries to the top search result; use Spotify
+  track URLs for exact versions.
+- Rate limits: tracks are added in batches of 100.
 
 ## Troubleshooting
 
-- Redirect URI mismatch: Ensure the URI in `.env` matches the one set in the Spotify Dashboard.
-- Token/cache issues: delete the `.cache` file (or your custom cache) and retry.
-- No results for a query: the script logs a warning and skips that line.
-
-## Next steps (optional)
-
-- Add support for reading CSV, exporting from other services, or enriching metadata.
-- Add cover image upload (supported via `ugc-image-upload`).
-- Save the created playlist ID/URL to a file for automation.
+- Redirect URI mismatch: Ensure the URI in `.env` matches your Spotify app.
+- Token/cache issues: delete `.cache` (or your `--cache` path) and retry.
+- Low track counts: add `--debug-scrape` to see per-URL extraction counts.
