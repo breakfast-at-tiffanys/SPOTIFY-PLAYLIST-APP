@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from bs4 import BeautifulSoup
 
 from spotify_playlist.sources import (

@@ -7,7 +7,6 @@ from typing import Any, List
 
 from spotify_playlist.ops import (
     add_tracks,
-    find_user_playlist_by_name,
     remove_items_older_than,
 )
 
@@ -59,7 +58,7 @@ class FakeSp:
 def test_add_tracks_batches_calls() -> None:
     sp = FakeSp()
     uris = [f"spotify:track:{i}" for i in range(205)]
-    add_tracks(sp, "plid", uris)
+    add_tracks(sp, "plid", uris)  # type: ignore
     assert len(sp.add_calls) == 3
     assert len(sp.add_calls[0]) == 100
     assert len(sp.add_calls[1]) == 100

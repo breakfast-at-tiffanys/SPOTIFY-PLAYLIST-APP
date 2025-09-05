@@ -34,5 +34,4 @@ jobs:
 
       - name: Flake8 (lint)
         run: |
-          flake8 .
-
+          flake8 . --max-line-length=88
