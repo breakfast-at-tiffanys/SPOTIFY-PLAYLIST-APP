@@ -5,14 +5,19 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List
 
-from bs4 import BeautifulSoup
 import pytest
+from bs4 import BeautifulSoup
 
 from spotify_playlist import sources as S
 
 
 class FakeResp:
-    def __init__(self, text: str = "", data: Any | None = None, raise_exc: Exception | None = None) -> None:
+    def __init__(
+        self,
+        text: str = "",
+        data: Any | None = None,
+        raise_exc: Exception | None = None,
+    ) -> None:
         self.text = text
         self._data = data
         self._raise = raise_exc
@@ -38,7 +43,9 @@ def test_resolve_track_uris_skips_empty_and_no_results(monkeypatch):
 
 def test_get_track_queries_from_json_non_list_returns_empty(monkeypatch):
     payload = {"items": {"not": "a list"}}
-    monkeypatch.setattr(S.requests, "get", lambda url, timeout=15: FakeResp(data=payload))
+    monkeypatch.setattr(
+        S.requests, "get", lambda url, timeout=15: FakeResp(data=payload)
+    )
     out = S.get_track_queries_from_json(
         url="https://example/json",
         item_path="items",
@@ -89,4 +96,3 @@ def test_orb_cs_fallback(monkeypatch):
     )
     assert out == ["AR - TT"]
     assert any("cs=dk.drp3" in u or "/dk/drp3/" in u for u in calls)
-

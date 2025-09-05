@@ -20,10 +20,13 @@ class FakeSearchSp:
 
 def test_resolve_track_uris_passes_through_track_uri() -> None:
     sp = FakeSearchSp({})
-    uris = resolve_track_uris(sp, [
-        "spotify:track:123",
-        "https://open.spotify.com/track/abc",
-    ])
+    uris = resolve_track_uris(
+        sp,
+        [
+            "spotify:track:123",
+            "https://open.spotify.com/track/abc",
+        ],
+    )
     assert uris == ["spotify:track:123", "https://open.spotify.com/track/abc"]
 
 
@@ -31,9 +34,11 @@ def test_resolve_track_uris_structured_then_fallback() -> None:
     # First try structured: track:"Title" artist:"Artist"
     structured = 'track:"Title" artist:"Artist"'
     plain = "Artist - Title"
-    sp = FakeSearchSp({
-        structured: ["uri:ok"],
-    })
+    sp = FakeSearchSp(
+        {
+            structured: ["uri:ok"],
+        }
+    )
     out = resolve_track_uris(sp, [plain])
     assert out == ["uri:ok"]
 
@@ -41,9 +46,10 @@ def test_resolve_track_uris_structured_then_fallback() -> None:
 def test_resolve_track_uris_plain_search_if_structured_missing() -> None:
     structured = 'track:"Title" artist:"Artist"'
     plain = "Artist - Title"
-    sp = FakeSearchSp({
-        plain: ["uri:plain"],
-    })
+    sp = FakeSearchSp(
+        {
+            plain: ["uri:plain"],
+        }
+    )
     out = resolve_track_uris(sp, [plain])
     assert out == ["uri:plain"]
-

@@ -16,7 +16,9 @@ class FakeSp:
 
     def playlist(self, playlist_id: str, fields: str) -> dict:
         return {
-            "external_urls": {"spotify": f"https://open.spotify.com/playlist/{playlist_id}"},
+            "external_urls": {
+                "spotify": f"https://open.spotify.com/playlist/{playlist_id}"
+            },
             "name": self._name,
             "public": self._public,
         }
@@ -24,19 +26,23 @@ class FakeSp:
 
 def test_cli_create_from_dr_day_creates_and_adds(monkeypatch, capsys):
     # Mock sources
-    monkeypatch.setattr(CLI, "discover_dr_program_urls", lambda s, d, debug=False: [
-        "https://dr/one",
-        "https://dr/two",
-    ])
     monkeypatch.setattr(
-        CLI, "get_track_queries_from_dr_urls", lambda urls, max_tracks=None, debug=False, keep_duplicates=False: [
+        CLI,
+        "discover_dr_program_urls",
+        lambda s, d, debug=False: [
+            "https://dr/one",
+            "https://dr/two",
+        ],
+    )
+    monkeypatch.setattr(
+        CLI,
+        "get_track_queries_from_dr_urls",
+        lambda urls, max_tracks=None, debug=False, keep_duplicates=False: [
             "Artist A - Title A",
             "Artist B - Title B",
-        ]
+        ],
     )
-    monkeypatch.setattr(
-        CLI, "resolve_track_uris", lambda sp, qs: ["uri:a", "uri:b"]
-    )
+    monkeypatch.setattr(CLI, "resolve_track_uris", lambda sp, qs: ["uri:a", "uri:b"])
 
     # Mock ops
     created: dict[str, Any] = {}
@@ -65,13 +71,19 @@ def test_cli_create_from_dr_day_creates_and_adds(monkeypatch, capsys):
 
 def test_cli_append_to_name_with_skip_and_retention(monkeypatch, capsys):
     # Prepare mocks
-    monkeypatch.setattr(CLI, "get_spotify_client", lambda cache_path=None: FakeSp("Existing", True))
+    monkeypatch.setattr(
+        CLI, "get_spotify_client", lambda cache_path=None: FakeSp("Existing", True)
+    )
     monkeypatch.setattr(CLI, "find_user_playlist_by_name", lambda sp, n: "plid")
     # Two queries -> two URIs
-    monkeypatch.setattr(CLI, "get_track_queries_from_dr_urls", lambda *a, **k: [
-        "X - Y",
-        "A - B",
-    ])
+    monkeypatch.setattr(
+        CLI,
+        "get_track_queries_from_dr_urls",
+        lambda *a, **k: [
+            "X - Y",
+            "A - B",
+        ],
+    )
     monkeypatch.setattr(CLI, "resolve_track_uris", lambda sp, qs: ["u1", "u2"])
 
     # Existing playlist has u1 already; only u2 should be added
@@ -91,16 +103,18 @@ def test_cli_append_to_name_with_skip_and_retention(monkeypatch, capsys):
     added: list[list[str]] = []
     monkeypatch.setattr(CLI, "add_tracks", lambda sp, plid, uris: added.append(uris))
 
-    rc = CLI.main([
-        "--append-to-name",
-        "Existing",
-        "--from-dr-urls",
-        "https://dr/program",
-        "--skip-existing",
-        "--retention-days",
-        "7",
-        "--debug-scrape",
-    ])
+    rc = CLI.main(
+        [
+            "--append-to-name",
+            "Existing",
+            "--from-dr-urls",
+            "https://dr/program",
+            "--skip-existing",
+            "--retention-days",
+            "7",
+            "--debug-scrape",
+        ]
+    )
     captured = capsys.readouterr()
     assert rc == 0
     # Only one new track added (u2)
@@ -113,7 +127,9 @@ def test_cli_append_to_name_with_skip_and_retention(monkeypatch, capsys):
 
 
 def test_cli_from_json_url_requires_keys(monkeypatch, capsys):
-    monkeypatch.setattr(CLI, "get_spotify_client", lambda cache_path=None: FakeSp("N", False))
+    monkeypatch.setattr(
+        CLI, "get_spotify_client", lambda cache_path=None: FakeSp("N", False)
+    )
     rc = CLI.main(["--from-json-url", "https://example/json"])
     captured = capsys.readouterr()
     assert rc == 2
@@ -121,18 +137,21 @@ def test_cli_from_json_url_requires_keys(monkeypatch, capsys):
 
 
 def test_cli_conflicting_append_flags(monkeypatch, capsys):
-    monkeypatch.setattr(CLI, "get_spotify_client", lambda cache_path=None: FakeSp("N", False))
+    monkeypatch.setattr(
+        CLI, "get_spotify_client", lambda cache_path=None: FakeSp("N", False)
+    )
     # Provide a trivial source so parsing continues to the conflict
-    monkeypatch.setattr(CLI, "resolve_track_uris", lambda sp, qs: ["u"]) 
-    rc = CLI.main([
-        "--append-to-playlist",
-        "plid",
-        "--append-to-name",
-        "Name",
-        "--queries",
-        "A - B",
-    ])
+    monkeypatch.setattr(CLI, "resolve_track_uris", lambda sp, qs: ["u"])
+    rc = CLI.main(
+        [
+            "--append-to-playlist",
+            "plid",
+            "--append-to-name",
+            "Name",
+            "--queries",
+            "A - B",
+        ]
+    )
     captured = capsys.readouterr()
     assert rc == 2
     assert "Use only one of --append-to-playlist or --append-to-name" in captured.err
-
