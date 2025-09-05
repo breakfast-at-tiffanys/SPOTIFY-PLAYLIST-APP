@@ -8,11 +8,10 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any, Iterable, List, Optional
+from typing import Any, Iterable, List, Optional, TypeVar
 
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
-
 
 SCOPES: list[str] = [
     # Modify/create playlists
@@ -76,7 +75,10 @@ def get_spotify_client(cache_path: Optional[str] = None) -> Spotify:
     return Spotify(auth_manager=auth_manager)
 
 
-def to_batches(items: List[str], size: int = 100) -> Iterable[List[str]]:
+T = TypeVar("T")
+
+
+def to_batches(items: List[T], size: int = 100) -> Iterable[List[T]]:
     """Yield `items` in chunks of `size`.
 
     Args:
