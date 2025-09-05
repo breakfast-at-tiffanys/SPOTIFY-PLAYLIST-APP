@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any, List
 
-import pytest
+ 
 from bs4 import BeautifulSoup
 
 from spotify_playlist import sources as S

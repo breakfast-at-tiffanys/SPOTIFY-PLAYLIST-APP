@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import Any, List
 
-import pytest
-
 from spotify_playlist import cli as CLI
 
 
