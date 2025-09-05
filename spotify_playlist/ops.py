@@ -114,6 +114,7 @@ def remove_items_older_than(sp: Spotify, playlist_id: str, days: int) -> int:
             positions_by_uri.setdefault(uri, []).append(idx)
     if not positions_by_uri:
         return 0
+
     class Occurrence(TypedDict):
         uri: str
         positions: List[int]
