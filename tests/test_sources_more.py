@@ -67,7 +67,7 @@ def test_get_playlist_track_uris_paginates_and_filters():
             if offset + limit < len(self.items):
                 next_url = "next"
             return {
-                "items": self.items[offset: offset + limit],
+                "items": self.items[offset : offset + limit],
                 "next": next_url,
                 "total": len(self.items),
             }
@@ -90,7 +90,7 @@ def test_get_liked_track_uris_paginates_and_filters():
             ]
 
         def current_user_saved_tracks(self, limit: int, offset: int):
-            next_chunk = self.items[offset: offset + limit]
+            next_chunk = self.items[offset : offset + limit]
             return {"items": next_chunk}
 
     sp = FakeSp()

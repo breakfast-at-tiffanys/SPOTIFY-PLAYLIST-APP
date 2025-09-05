@@ -5,8 +5,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any, List, Optional, Protocol, TypedDict, cast
 
- 
-
 from .core import to_batches
 
 

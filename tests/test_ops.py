@@ -32,7 +32,7 @@ class FakeSp:
         if offset + limit < len(self._items):
             next_url = "next"
         return {
-            "items": self._items[offset: offset + limit],
+            "items": self._items[offset : offset + limit],
             "next": next_url,
             "total": len(self._items),
         }
