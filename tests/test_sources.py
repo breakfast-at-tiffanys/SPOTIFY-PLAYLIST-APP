@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from bs4 import BeautifulSoup
 
 from spotify_playlist.sources import (
@@ -13,10 +11,10 @@ from spotify_playlist.sources import (
 
 def test_discover_dr_program_urls_parses_relative_and_absolute(monkeypatch):
     html = (
-        '<html><body>'
+        "<html><body>"
         '<a href="/lyd/playlister/p3/2025-09-05/foo-abc">x</a>'
         '<a href="https://www.dr.dk/lyd/playlister/p3/2025-09-05/bar-def">y</a>'
-        '</body></html>'
+        "</body></html>"
     )
 
     from spotify_playlist import sources as S
@@ -40,9 +38,7 @@ def test_next_data_playlist_points_extraction(monkeypatch):
                 "playlistIndexPoints": [
                     {
                         "title": "DAISIES",
-                        "roles": [
-                            {"role": "Hovedkunstner", "name": "Justin Bieber"}
-                        ],
+                        "roles": [{"role": "Hovedkunstner", "name": "Justin Bieber"}],
                     },
                     {
                         "title": "Calm Down (Remix)",
@@ -66,4 +62,3 @@ def test_next_data_playlist_points_extraction(monkeypatch):
     )
     assert "Justin Bieber - DAISIES" in queries
     assert "Rema og Selena Gomez - Calm Down (Remix)" in queries
-

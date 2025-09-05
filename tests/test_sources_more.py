@@ -6,10 +6,9 @@ Covers pagination, JSON mapping, JSON-LD/dom/script extraction, and DR/ORB flows
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List
+from typing import Any
 
 from bs4 import BeautifulSoup
-import pytest
 
 from spotify_playlist import sources as S
 
@@ -61,7 +60,9 @@ def test_get_playlist_track_uris_paginates_and_filters():
                 {"track": {"uri": "u3", "type": "track", "is_local": False}},
             ]
 
-        def playlist_items(self, playlist_id: str, limit: int, offset: int, fields: str):
+        def playlist_items(
+            self, playlist_id: str, limit: int, offset: int, fields: str
+        ):
             next_url = None
             if offset + limit < len(self.items):
                 next_url = "next"
@@ -93,9 +94,11 @@ def test_get_liked_track_uris_paginates_and_filters():
             return {"items": next_chunk}
 
     sp = FakeSp()
-    out = S.get_liked_track_uris(sp, max_tracks=None)
+    out = S.get_liked_track_uris(
+        sp, max_tracks=None  # type: ignore
+    )  # pyright: ignore[reportArgumentType]
     assert out == ["a1", "a2"]
-    assert S.get_liked_track_uris(sp, max_tracks=1) == ["a1"]
+    assert S.get_liked_track_uris(sp, max_tracks=1) == ["a1"]  # type: ignore
 
 
 def test_extract_from_jsonld_parses_artist_and_title():
@@ -107,7 +110,7 @@ def test_extract_from_jsonld_parses_artist_and_title():
 
 
 def test_extract_from_any_json_scripts_parses_embedded():
-    embedded = "var DATA = {\"artist\": \"AA\", \"title\": \"TT\" };"  # no type
+    embedded = 'var DATA = {"artist": "AA", "title": "TT" };'  # no type
     soup = BeautifulSoup(f"<script>{embedded}</script>", "lxml")
     out = S._extract_from_any_json_scripts(soup)  # type: ignore[attr-defined]
     assert "AA - TT" in out
@@ -119,7 +122,9 @@ def test_onlineradiobox_parses_basic_table(monkeypatch):
         "<td class='playlist__title'>TT</td></tr>"  # one row
         "<tr><td>Ignored</td></tr></table>"
     )
-    monkeypatch.setattr(S.requests, "get", lambda u, headers=None, timeout=20: FakeResp(text=html))
+    monkeypatch.setattr(
+        S.requests, "get", lambda u, headers=None, timeout=20: FakeResp(text=html)
+    )
     out = S.get_track_queries_from_onlineradiobox("https://orb", max_tracks=None)
     assert out == ["AR - TT"]
 
@@ -129,7 +134,10 @@ def test_get_track_queries_from_dr_urls_aggregate_and_keep_duplicates(monkeypatc
         "props": {
             "pageProps": {
                 "playlistIndexPoints": [
-                    {"title": "TT1", "roles": [{"role": "Hovedkunstner", "name": "AR1"}]}
+                    {
+                        "title": "TT1",
+                        "roles": [{"role": "Hovedkunstner", "name": "AR1"}],
+                    }
                 ]
             }
         }
@@ -158,4 +166,3 @@ def test_get_track_queries_from_dr_urls_aggregate_and_keep_duplicates(monkeypatc
     out2 = S.get_track_queries_from_dr_urls(urls, keep_duplicates=True)
     # keeps duplicate AR1 - TT1 from both pages
     assert out2.count("AR1 - TT1") == 2
-

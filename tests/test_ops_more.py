@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any
 
 from spotify_playlist.ops import (
     create_playlist,
@@ -18,11 +18,17 @@ class FakeSp:
     def current_user(self) -> dict:
         return {"id": "user123"}
 
-    def user_playlist_create(self, user: str, name: str, public: bool, description: str) -> dict:  # noqa: D401,E501
-        self.created.append({"user": user, "name": name, "public": public, "description": description})
+    def user_playlist_create(
+        self, user: str, name: str, public: bool, description: str
+    ) -> dict:  # noqa: D401,E501
+        self.created.append(
+            {"user": user, "name": name, "public": public, "description": description}
+        )
         return {"id": "new_pl"}
 
-    def playlist_items(self, playlist_id: str, limit: int, offset: int, fields: str) -> dict:  # noqa: D401,E501
+    def playlist_items(
+        self, playlist_id: str, limit: int, offset: int, fields: str
+    ) -> dict:  # noqa: D401,E501
         next_url = None
         if offset + limit < len(self._items):
             next_url = "next"
@@ -46,4 +52,3 @@ def test_get_playlist_items_with_meta_paginates() -> None:
     out = get_playlist_items_with_meta(sp, "pl")
     # Default limit is 100 in impl; still returns all
     assert [o["track"]["uri"] for o in out] == ["u1", "u2", "u3"]
-
