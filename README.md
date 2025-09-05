@@ -1,6 +1,6 @@
 # Spotify Playlist App (Python CLI)
 
-Create Spotify playlists from Python using Spotipy. Provide a list of search queries or track URLs/URIs and this tool creates a playlist and adds the tracks.
+Create Spotify playlists from Python using Spotipy. Provide a list of search queries or track URLs/URIs — or source tracks from an existing playlist or your Liked Songs — and this tool creates a playlist and adds the tracks.
 
 ## Prerequisites
 
@@ -27,7 +27,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-Provide input as either a text file with one line per query/URI, or pass queries directly.
+Provide input as either a text file with one line per query/URI, pass queries directly, copy from an existing playlist, pull from Liked Songs, or fetch from a JSON feed (e.g., a station’s recently played endpoint).
 
 Examples:
 
@@ -45,6 +45,49 @@ python create_playlist.py -n "Mixed" -q \
 
 # Create a public playlist
 python create_playlist.py -n "Public List" --public -q "nirvana - lithium"
+
+# Copy tracks from an existing playlist (URL/URI/ID)
+python create_playlist.py -n "Copied From Discover Weekly" -p https://open.spotify.com/playlist/37i9dQZEVXcFBBexample
+
+# Pull from your Liked Songs (Saved Tracks)
+python create_playlist.py -n "My Liked (First 300)" --from-liked -m 300
+
+# Limit number of tracks taken from a source
+python create_playlist.py -n "First 100 from X" -p spotify:playlist:4hOKQuZbraPDIfaGbM3lKI -m 100
+
+# From a JSON feed (map fields to artist/title)
+# Example keys assume items like: { "artist": {"name": "..."}, "title": "..." }
+python create_playlist.py -n "From Feed" \
+  --from-json-url https://example.com/recently-played.json \
+  --json-item-path items \ 
+  --json-artist-key artist.name \
+  --json-title-key title \
+  -m 50
+
+# Scrape Onlineradiobox station playlist (e.g., DR P3)
+python create_playlist.py -n "P3 Latest" \
+  --from-onlineradiobox https://onlineradiobox.com/dk/drp3/playlist/ \
+  -m 50
+
+# Scrape DR program playlist pages (aggregate multiple URLs for a day)
+python create_playlist.py -n "P3 2025-09-05" \
+  --from-dr-urls \
+  https://www.dr.dk/lyd/playlister/p3/2025-09-05/fredag-5-sep-2025-13332536365 \
+  https://www.dr.dk/lyd/playlister/p3/2025-09-05/<another-program-id> \
+  https://www.dr.dk/lyd/playlister/p3/2025-09-05/<third-program-id> \
+  -m 200
+
+# Auto-discover all DR program pages for a day
+python create_playlist.py -n "P3 2025-09-05" \
+  --from-dr-day p3 2025-09-05 \
+  --keep-duplicates \
+  -m 300 --debug-scrape
+
+# Keep a rolling playlist by name (auto-create if missing), remove items older than 7 days
+python create_playlist.py \
+  --append-to-name "P3 (Updated daily)" \
+  --from-dr-day p3 $(date +%F) \
+  --keep-duplicates --skip-existing --retention-days 7 -m 300
 ```
 
 On first run, a browser window opens to authorize the app. After approving, tokens are cached in `.cache` (or your custom `--cache` path).
@@ -60,8 +103,10 @@ On first run, a browser window opens to authorize the app. After approving, toke
 ## Notes
 
 - Scopes requested: `playlist-modify-private`, `playlist-modify-public`, `ugc-image-upload`.
+- When using `--from-liked`, add scope `user-library-read` (already configured). You may be prompted to re-authorize once.
 - The script resolves free-text queries to the top search result. If you need precise versions, use Spotify track URLs/URIs.
 - Rate limits: adding tracks is batched to 100 per request to respect API limits.
+- JSON source: use dotted paths for `--json-item-path`, `--json-artist-key`, and `--json-title-key`. Lists can be indexed (e.g., `tracks.0.title`).
 
 ## Troubleshooting
 
