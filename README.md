@@ -43,7 +43,7 @@ python create_playlist.py \
 # Daily append (use the playlist by name)
 python create_playlist.py \
   --append-to-name "P3 (Updated daily)" \
-  --from-dr-day p3 $(date +%F) \
+  --from-dr-day p3 today \
   --keep-duplicates --skip-existing --retention-days 7 -m 300
 ```
 
@@ -59,9 +59,22 @@ SHELL=/bin/bash
 * 23 * * * cd /home/pi/spotify-playlist-app && \
   /home/pi/spotify-playlist-app/.venv/bin/python create_playlist.py \
   --append-to-name "P3 (Updated daily)" \
-  --from-dr-day p3 $(date +\%F) \
+  --from-dr-day p3 today \
   --keep-duplicates --skip-existing --retention-days 7 -m 300 \
   >> cron.log 2>&1
+```
+
+Or use the helper script (auto git pull + run):
+
+```
+chmod +x scripts/update_p3_daily.sh
+scripts/update_p3_daily.sh
+```
+
+Systemd timer ExecStart can call the script directly:
+
+```
+ExecStart=/bin/bash -lc '/home/pi/spotify-playlist-app/scripts/update_p3_daily.sh'
 ```
 
 Notes for Pi:
