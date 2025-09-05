@@ -1,0 +1,8 @@
+# Example song queries and Spotify track URLs/URIs
+# Lines starting with # are ignored
+Tame Impala - The Less I Know The Better
+daft punk one more time
+The Weeknd - Blinding Lights
+nirvana - lithium
+https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b
+spotify:track:5ChkMS8OtdzJeqyybCc9R5
