@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from bs4 import BeautifulSoup
 
@@ -64,9 +63,7 @@ def test_next_data_multiple_artists_and_contributors():
             }
         }
     }
-    html = (
-        '<script id="__NEXT_DATA__">' + json.dumps(payload) + "</script>"
-    )
+    html = '<script id="__NEXT_DATA__">' + json.dumps(payload) + "</script>"
     soup = BeautifulSoup(html, "lxml")
     out = S._extract_from_next_data_playlist_points(  # type: ignore[attr-defined]
         soup, debug=False, dedupe=True
@@ -75,4 +72,3 @@ def test_next_data_multiple_artists_and_contributors():
     assert "A, B - Song" in out
     # Second uses contributors
     assert "C - Another" in out or "D - Another" in out
-

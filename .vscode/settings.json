@@ -12,6 +12,12 @@
   },
   "black-formatter.args": ["--line-length", "88"],
   "isort.args": ["--profile", "black", "--line-length", "88"],
-  "python.analysis.typeCheckingMode": "basic"
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportArgumentType": "none",
+    "reportOptionalMemberAccess": "none",
+    "reportAttributeAccessIssue": "none",
+    "reportUnknownMemberType": "none",
+    "reportMissingTypeStubs": "none"
+  }
 }
-

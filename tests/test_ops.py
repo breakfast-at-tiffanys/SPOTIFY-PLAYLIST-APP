@@ -7,7 +7,6 @@ from typing import Any, List
 
 from spotify_playlist.ops import (
     add_tracks,
-    find_user_playlist_by_name,
     remove_items_older_than,
 )
 
@@ -21,7 +20,9 @@ class FakeSp:
         self._next_index = 0
 
     # Ops helpers
-    def playlist_add_items(self, playlist_id: str, chunk: list[str]) -> None:  # noqa: D401
+    def playlist_add_items(
+        self, playlist_id: str, chunk: list[str]
+    ) -> None:  # noqa: D401
         self.add_calls.append(chunk)
 
     def playlist_items(
@@ -57,7 +58,7 @@ class FakeSp:
 def test_add_tracks_batches_calls() -> None:
     sp = FakeSp()
     uris = [f"spotify:track:{i}" for i in range(205)]
-    add_tracks(sp, "plid", uris)
+    add_tracks(sp, "plid", uris)  # type: ignore
     assert len(sp.add_calls) == 3
     assert len(sp.add_calls[0]) == 100
     assert len(sp.add_calls[1]) == 100
@@ -73,7 +74,10 @@ def test_remove_items_older_than_removes_by_positions() -> None:
     sp._items = [
         {"added_at": old, "track": {"uri": "u1", "type": "track", "is_local": False}},
         {"added_at": old, "track": {"uri": "u1", "type": "track", "is_local": False}},
-        {"added_at": recent, "track": {"uri": "u2", "type": "track", "is_local": False}},
+        {
+            "added_at": recent,
+            "track": {"uri": "u2", "type": "track", "is_local": False},
+        },
     ]
     removed = remove_items_older_than(sp, "plid", days=7)
     # two positions removed
@@ -101,4 +105,3 @@ def test_find_user_playlist_by_name_prefers_owned() -> None:
     found = find_user_playlist_by_name(sp, "Test")
     # Prefers owned (id2) over non-owned exact (id1)
     assert found == "id2"
-

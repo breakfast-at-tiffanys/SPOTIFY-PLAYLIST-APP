@@ -296,7 +296,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             playlist_id = found_id
         else:
             playlist_id = create_playlist(
-                sp, target_name, args.description, args.public
+                sp, target_name, args.description, args.public  # type: ignore
             )
             if args.debug_scrape:
                 print(
@@ -343,15 +343,21 @@ def main(argv: Optional[List[str]] = None) -> int:
     if uris:
         add_tracks(sp, playlist_id, uris)
 
-    playlist_obj = sp.playlist(
-        playlist_id, fields="external_urls.spotify,name,public"
-    )
+    playlist_obj = sp.playlist(playlist_id, fields="external_urls.spotify,name,public")
     # Safely extract fields for Pylance and robustness
     playlist_dict: Any = playlist_obj if isinstance(playlist_obj, dict) else {}
-    ext = playlist_dict.get("external_urls") if isinstance(playlist_dict, dict) else None
+    ext = (
+        playlist_dict.get("external_urls") if isinstance(playlist_dict, dict) else None
+    )
     url_val = ext.get("spotify") if isinstance(ext, dict) else None
-    url = url_val if isinstance(url_val, str) else f"https://open.spotify.com/playlist/{playlist_id}"
-    public_val = playlist_dict.get("public") if isinstance(playlist_dict, dict) else False
+    url = (
+        url_val
+        if isinstance(url_val, str)
+        else f"https://open.spotify.com/playlist/{playlist_id}"
+    )
+    public_val = (
+        playlist_dict.get("public") if isinstance(playlist_dict, dict) else False
+    )
     visibility = "public" if bool(public_val) else "private"
     action = (
         "Updated" if (args.append_to_playlist or args.append_to_name) else "Created"

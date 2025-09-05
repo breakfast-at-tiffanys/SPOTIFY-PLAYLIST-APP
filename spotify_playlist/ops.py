@@ -3,15 +3,21 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Any, List, Optional, TypedDict, cast
-
-from spotipy import Spotify
+from typing import Any, List, Optional, Protocol, TypedDict, cast
 
 from .core import to_batches
 
 
+class CreateClient(Protocol):
+    def current_user(self) -> dict: ...
+
+    def user_playlist_create(
+        self, user: str, name: str, public: bool, description: str
+    ) -> dict: ...
+
+
 def create_playlist(
-    sp: Spotify, name: str, description: Optional[str], public: bool
+    sp: CreateClient, name: str, description: Optional[str], public: bool
 ) -> str:
     """Create a playlist for the current user and return its ID.
 
@@ -35,7 +41,11 @@ def create_playlist(
     return cast(str, playlist.get("id"))
 
 
-def add_tracks(sp: Spotify, playlist_id: str, uris: List[str]) -> None:
+class AddItemsClient(Protocol):
+    def playlist_add_items(self, playlist_id: str, items: List[str]) -> None: ...
+
+
+def add_tracks(sp: AddItemsClient, playlist_id: str, uris: List[str]) -> None:
     """Add tracks to a playlist in batches of 100.
 
     Args:
@@ -47,7 +57,15 @@ def add_tracks(sp: Spotify, playlist_id: str, uris: List[str]) -> None:
         sp.playlist_add_items(playlist_id, chunk)
 
 
-def get_playlist_items_with_meta(sp: Spotify, playlist_id: str) -> List[dict]:
+class PlaylistReadClient(Protocol):
+    def playlist_items(
+        self, playlist_id: str, limit: int, offset: int, fields: str
+    ) -> dict: ...
+
+
+def get_playlist_items_with_meta(
+    sp: PlaylistReadClient, playlist_id: str
+) -> List[dict]:
     """Return playlist items with `added_at` and `track` metadata.
 
     Args:
@@ -76,7 +94,13 @@ def get_playlist_items_with_meta(sp: Spotify, playlist_id: str) -> List[dict]:
     return items
 
 
-def remove_items_older_than(sp: Spotify, playlist_id: str, days: int) -> int:
+class RetentionClient(PlaylistReadClient, Protocol):
+    def playlist_remove_specific_occurrences_of_items(
+        self, playlist_id: str, chunk: List[dict]
+    ) -> None: ...
+
+
+def remove_items_older_than(sp: RetentionClient, playlist_id: str, days: int) -> int:
     """Remove occurrences older than `days` based on `added_at` timestamp.
 
     Args:
@@ -114,6 +138,7 @@ def remove_items_older_than(sp: Spotify, playlist_id: str, days: int) -> int:
             positions_by_uri.setdefault(uri, []).append(idx)
     if not positions_by_uri:
         return 0
+
     class Occurrence(TypedDict):
         uri: str
         positions: List[int]
@@ -123,12 +148,21 @@ def remove_items_older_than(sp: Spotify, playlist_id: str, days: int) -> int:
         {"uri": uri, "positions": pos} for uri, pos in positions_by_uri.items()
     ]
     for chunk in to_batches(payload, 50):
-        sp.playlist_remove_specific_occurrences_of_items(playlist_id, chunk)
+        sp.playlist_remove_specific_occurrences_of_items(
+            playlist_id,
+            chunk,
+        )
         total_removed += sum(len(entry["positions"]) for entry in chunk)
     return total_removed
 
 
-def find_user_playlist_by_name(sp: Spotify, name: str) -> Optional[str]:
+class DiscoveryClient(Protocol):
+    def current_user(self) -> dict: ...
+
+    def current_user_playlists(self, limit: int, offset: int) -> dict: ...
+
+
+def find_user_playlist_by_name(sp: DiscoveryClient, name: str) -> Optional[str]:
     """Find a playlist ID by name for the current user.
 
     Prefers an exact match, falling back to case-insensitive match. When there

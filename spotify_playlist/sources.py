@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, List, Optional, cast
+from typing import Any, List, Optional, Protocol, cast
 from urllib.parse import (
     parse_qsl,
     urlencode,
@@ -26,7 +26,24 @@ from spotipy import Spotify
 from .core import dedupe_preserve_order, pluck
 
 
-def resolve_track_uris(sp: Spotify, queries: List[str]) -> List[str]:
+class SearchClient(Protocol):
+    """Minimal interface required for searching tracks.
+
+    Matches Spotipy's search method (with optional params) and allows
+    lightweight fakes in tests. Return type is Any and cast at use sites.
+    """
+
+    def search(
+        self,
+        q: str,
+        limit: int = ...,  # noqa: D401
+        offset: int = ...,
+        type: str = ...,  # noqa: A003 - 'type' is Spotipy's param name
+        market: Optional[str] = ...,
+    ) -> Any: ...
+
+
+def resolve_track_uris(sp: SearchClient, queries: List[str]) -> List[str]:
     """Resolve a list of search queries/URIs to Spotify track URIs.
 
     Args:

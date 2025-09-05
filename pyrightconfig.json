@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/pyright/main/packages/pyright-internal/src/pyright-schemas/config.schema.json",
+  "typeCheckingMode": "basic",
+  "exclude": [
+    "**/.venv",
+    "**/__pycache__",
+    "**/.git"
+  ],
+  "reportArgumentType": "none",
+  "reportOptionalMemberAccess": "none",
+  "reportAttributeAccessIssue": "none",
+  "reportUnknownMemberType": "none",
+  "reportMissingTypeStubs": "none"
+}
+

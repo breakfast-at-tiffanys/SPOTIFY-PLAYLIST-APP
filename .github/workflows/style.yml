@@ -1,6 +1,7 @@
 name: Style
 
 on:
+  push:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -33,5 +34,4 @@ jobs:
 
       - name: Flake8 (lint)
         run: |
-          flake8 .
-
+          flake8 . --max-line-length=88 --extend-ignore=E203,W503
