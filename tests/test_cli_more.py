@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 from spotify_playlist import cli as CLI
 
 
