@@ -21,7 +21,9 @@ def test_integration_dr_fixture_extraction(monkeypatch):
     monkeypatch.setattr(S, "_fetch_html", lambda url: html)
 
     # Use any URL; content comes from the fixture via monkeypatch
-    out = S.get_track_queries_from_dr_urls(["https://www.dr.dk/lyd/playlister/p3/2025-09-05/mock"])
+    out = S.get_track_queries_from_dr_urls(
+        ["https://www.dr.dk/lyd/playlister/p3/2025-09-05/mock"]
+    )
 
     # Expect exact count and correct format "Artist - Title"
     assert len(out) == 10
@@ -33,4 +35,3 @@ def test_integration_dr_fixture_extraction(monkeypatch):
     assert "Artist B - Song Two" in out
     assert any(q.startswith("Artist C") and q.endswith("Song Three") for q in out)
     assert "Artist J - Song Ten" in out
-
