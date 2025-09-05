@@ -30,4 +30,3 @@ def test_sanitize_query_long_title_truncates():
     out = sanitize_query(q)
     assert out is not None
     assert len(out) <= 250
-

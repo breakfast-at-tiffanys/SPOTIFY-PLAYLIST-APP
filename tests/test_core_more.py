@@ -34,4 +34,3 @@ def test_pluck_nonexistent_and_invalid_index() -> None:
     data = {"a": [1, 2]}
     assert pluck(data, "a.10") is None
     assert pluck(data, "b.c") is None
-
