@@ -115,9 +115,7 @@ def get_playlist_track_uris(
         fields = "items(track(uri,type,is_local)),next,total"
         resp = cast(
             dict[str, Any],
-            sp.playlist_items(
-                playlist_id, limit=limit, offset=offset, fields=fields
-            ),
+            sp.playlist_items(playlist_id, limit=limit, offset=offset, fields=fields),
         )
         items = cast(List[dict], resp.get("items", []))
         for it in items:
@@ -335,6 +333,7 @@ def _extract_from_next_data_playlist_points(
                             "main",
                             "artist",
                             "performer",
+                            "feature",
                             "primary artist",
                             "primary_artist",
                             "primaryartist",
@@ -511,8 +510,16 @@ def _extract_from_dom_labels(soup: BeautifulSoup) -> List[str]:
         "[data-component*='track'], [data-testid*='track']"
     )
     for c in containers or []:
-        items = c.find_all(True, recursive=True)
-        for it in items:
+        # Check container's own text
+        c_text = " ".join(c.stripped_strings)
+        if c_text and re.search(r"\s+[-—–]\s+", c_text):
+            a, t = re.split(r"\s+[-—–]\s+", c_text, maxsplit=1)
+            a = a.strip()
+            t = t.strip()
+            if a and t:
+                queries.append(f"{a} - {t}")
+        # Check children
+        for it in c.find_all(True, recursive=True):
             text = " ".join(it.stripped_strings)
             if not text:
                 continue
@@ -522,7 +529,6 @@ def _extract_from_dom_labels(soup: BeautifulSoup) -> List[str]:
                 title = title.strip()
                 if artist and title:
                     queries.append(f"{artist} - {title}")
-                    continue
     return dedupe_preserve_order(queries)
 
 
@@ -565,7 +571,7 @@ def _extract_from_regex(text: str) -> List[str]:
         if not line:
             continue
         line = re.sub(r"^\d{1,2}:\d{2}\s+", "", line)
-        m = re.search(r"^(.{2,80})\s+[-—–]\s+(.{2,120})$", line)
+        m = re.search(r"^(.{1,80})\s+[-—–]\s+(.{1,120})$", line)
         if m:
             a = m.group(1).strip()
             t = m.group(2).strip()
