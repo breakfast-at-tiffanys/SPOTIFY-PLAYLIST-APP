@@ -6,9 +6,8 @@ Covers pagination, JSON mapping, JSON-LD/dom/script extraction, and DR/ORB flows
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List
+from typing import Any
 
-import pytest
 from bs4 import BeautifulSoup
 
 from spotify_playlist import sources as S
@@ -95,9 +94,11 @@ def test_get_liked_track_uris_paginates_and_filters():
             return {"items": next_chunk}
 
     sp = FakeSp()
-    out = S.get_liked_track_uris(sp, max_tracks=None)
+    out = S.get_liked_track_uris(
+        sp, max_tracks=None  # type: ignore
+    )  # pyright: ignore[reportArgumentType]
     assert out == ["a1", "a2"]
-    assert S.get_liked_track_uris(sp, max_tracks=1) == ["a1"]
+    assert S.get_liked_track_uris(sp, max_tracks=1) == ["a1"]  # type: ignore
 
 
 def test_extract_from_jsonld_parses_artist_and_title():

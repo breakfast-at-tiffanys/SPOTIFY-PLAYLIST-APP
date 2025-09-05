@@ -296,7 +296,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             playlist_id = found_id
         else:
             playlist_id = create_playlist(
-                sp, target_name, args.description, args.public
+                sp, target_name, args.description, args.public  # type: ignore
             )
             if args.debug_scrape:
                 print(
