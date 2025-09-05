@@ -24,7 +24,7 @@ class FakeResp:
         if self._raise is not None:
             raise self._raise
 
-    def _json(self) -> Any:  # noqa: D401
+    def json(self) -> Any:  # noqa: D401
         if self._data is None:
             raise ValueError("no json")
         return self._data
