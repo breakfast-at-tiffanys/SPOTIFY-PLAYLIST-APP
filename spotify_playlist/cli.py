@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-from typing import List, Optional
+from typing import Any, List, Optional, Set
 
 from dotenv import load_dotenv
 
@@ -59,9 +59,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         Parsed arguments namespace.
     """
     p = argparse.ArgumentParser(
-        description=(
-            "Create or update a Spotify playlist from queries or sources."
-        )
+        description=("Create or update a Spotify playlist from queries or sources.")
     )
     p.add_argument(
         "--name",
@@ -77,7 +75,8 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         help="Create as public playlist (default from DEFAULT_PUBLIC)",
     )
 
-    src = p.add_mutually_exclusive_group(required=True)
+    # Don't require at parse time so we can return a friendly error code
+    src = p.add_mutually_exclusive_group(required=False)
     src.add_argument(
         "--file",
         "-f",
@@ -101,9 +100,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     )
     src.add_argument(
         "--from-json-url",
-        help=(
-            "Fetch JSON from URL and map to 'artist - title' using dotted keys"
-        ),
+        help=("Fetch JSON from URL and map to 'artist - title' using dotted keys"),
     )
     src.add_argument(
         "--from-onlineradiobox",
@@ -114,8 +111,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         "--from-dr-urls",
         nargs="+",
         help=(
-            "Scrape one or more DR 'lyd' playlist URLs (per-program) and "
-            "aggregate"
+            "Scrape one or more DR 'lyd' playlist URLs (per-program) and " "aggregate"
         ),
     )
     src.add_argument(
@@ -161,8 +157,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         type=int,
         default=None,
         help=(
-            "If set, remove items added more than N days ago from target "
-            "playlist"
+            "If set, remove items added more than N days ago from target " "playlist"
         ),
     )
     p.add_argument(
@@ -170,9 +165,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         action="store_true",
         help="Skip adding tracks already present in target playlist",
     )
-    p.add_argument(
-        "--cache", default=None, help="Path to Spotipy token cache file"
-    )
+    p.add_argument("--cache", default=None, help="Path to Spotipy token cache file")
     return p.parse_args(argv)
 
 
@@ -317,9 +310,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 file=sys.stderr,
             )
             return 2
-        playlist_id = create_playlist(
-            sp, args.name, args.description, args.public
-        )
+        playlist_id = create_playlist(sp, args.name, args.description, args.public)
 
     # Apply retention policy first.
     if args.retention_days and args.retention_days > 0:
@@ -333,25 +324,40 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Optionally skip adding any already-present tracks.
     if args.skip_existing:
         existing = get_playlist_items_with_meta(sp, playlist_id)
-        existing_uris = {
-            (it.get("track") or {}).get("uri") for it in existing if it.get("track")
-        }
+        # Safely collect existing URIs
+        existing_uris: Set[str] = set()
+        for item in existing:
+            track = item.get("track")
+            if isinstance(track, dict):
+                uri = track.get("uri")
+                if isinstance(uri, str):
+                    existing_uris.add(uri)
         before = len(uris)
         uris = [u for u in uris if u not in existing_uris]
         skipped = before - len(uris)
         if skipped and args.debug_scrape:
-            print(f"DEBUG: Skipped {skipped} tracks already in playlist", file=sys.stderr)
+            print(
+                f"DEBUG: Skipped {skipped} tracks already in playlist", file=sys.stderr
+            )
 
     if uris:
         add_tracks(sp, playlist_id, uris)
 
-    playlist = sp.playlist(playlist_id, fields="external_urls.spotify,name,public")
-    url = playlist["external_urls"]["spotify"]
-    visibility = "public" if playlist["public"] else "private"
+    playlist_obj = sp.playlist(
+        playlist_id, fields="external_urls.spotify,name,public"
+    )
+    # Safely extract fields for Pylance and robustness
+    playlist_dict: Any = playlist_obj if isinstance(playlist_obj, dict) else {}
+    ext = playlist_dict.get("external_urls") if isinstance(playlist_dict, dict) else None
+    url_val = ext.get("spotify") if isinstance(ext, dict) else None
+    url = url_val if isinstance(url_val, str) else f"https://open.spotify.com/playlist/{playlist_id}"
+    public_val = playlist_dict.get("public") if isinstance(playlist_dict, dict) else False
+    visibility = "public" if bool(public_val) else "private"
     action = (
         "Updated" if (args.append_to_playlist or args.append_to_name) else "Created"
     )
-    print(f"{action} {visibility} playlist '{playlist['name']}' with "
-          f"{len(uris)} new tracks: {url}")
+    print(
+        f"{action} {visibility} playlist '{(playlist_dict.get('name') or '')}' with "
+        f"{len(uris)} new tracks: {url}"
+    )
     return 0
-
