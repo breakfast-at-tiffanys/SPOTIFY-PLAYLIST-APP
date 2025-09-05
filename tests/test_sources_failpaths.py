@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any, List
 
 from bs4 import BeautifulSoup
@@ -25,7 +24,7 @@ class FakeResp:
         if self._raise is not None:
             raise self._raise
 
-    def json(self) -> Any:  # noqa: D401
+    def _json(self) -> Any:  # noqa: D401
         if self._data is None:
             raise ValueError("no json")
         return self._data
