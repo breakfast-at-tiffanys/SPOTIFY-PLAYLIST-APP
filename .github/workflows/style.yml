@@ -1,13 +1,12 @@
-name: CI
+name: Style
 
 on:
-  push: {}
   pull_request:
     branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  tests:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,7 +23,15 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
 
-      - name: Run tests
+      - name: Black (check)
         run: |
-          pytest -q --maxfail=1 --disable-warnings \
-            --cov=spotify_playlist --cov-report=term-missing --cov-fail-under=80
+          black --check --diff .
+
+      - name: isort (check)
+        run: |
+          isort --check-only --diff .
+
+      - name: Flake8 (lint)
+        run: |
+          flake8 .
+
