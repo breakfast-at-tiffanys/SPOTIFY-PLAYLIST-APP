@@ -10,6 +10,7 @@ import argparse
 import os
 import sys
 from typing import Any, List, Optional, Set
+from datetime import date, timedelta
 
 from dotenv import load_dotenv
 
@@ -242,11 +243,18 @@ def main(argv: Optional[List[str]] = None) -> int:
             return 3
         uris = resolve_track_uris(sp, queries)
     elif args.from_dr_day:
-        station, date = args.from_dr_day
-        urls = discover_dr_program_urls(station, date, debug=args.debug_scrape)
+        station, day = args.from_dr_day
+        # Convenience: support keywords 'today' and 'yesterday'
+        if isinstance(day, str):
+            key = day.strip().lower()
+            if key == "today":
+                day = date.today().isoformat()
+            elif key == "yesterday":
+                day = (date.today() - timedelta(days=1)).isoformat()
+        urls = discover_dr_program_urls(station, str(day), debug=args.debug_scrape)
         if not urls:
             print(
-                f"No DR program URLs discovered for {station} {date}.",
+                f"No DR program URLs discovered for {station} {day}.",
                 file=sys.stderr,
             )
             return 3
