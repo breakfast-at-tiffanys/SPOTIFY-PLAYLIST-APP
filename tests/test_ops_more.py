@@ -32,7 +32,7 @@ class FakeSp:
         next_url = None
         if offset + limit < len(self._items):
             next_url = "next"
-        return {"items": self._items[offset: offset + limit], "next": next_url}
+        return {"items": self._items[offset : offset + limit], "next": next_url}
 
 
 def test_create_playlist_calls_spotify() -> None:

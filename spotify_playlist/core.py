@@ -89,7 +89,7 @@ def to_batches(items: List[T], size: int = 100) -> Iterable[List[T]]:
         List slices of at most `size` elements.
     """
     for i in range(0, len(items), size):
-        yield items[i: i + size]
+        yield items[i : i + size]
 
 
 def dedupe_preserve_order(items: List[str]) -> List[str]:
