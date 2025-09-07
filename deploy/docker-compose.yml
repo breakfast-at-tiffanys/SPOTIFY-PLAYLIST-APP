@@ -14,11 +14,16 @@ services:
     # Run the updater once on start; scheduling can be handled by host cron.
     command: >
       set -euxo pipefail;
-      echo "[compose] Running python create_playlist.py at $(date -Iseconds)";
+      echo "[compose] Running python create_playlist.py at $$(date -Iseconds)";
       python -V;
-      echo "[compose] CWD=$(pwd)";
+      echo "[compose] CWD=$$(pwd)";
       echo "[compose] Description preview:"; head -n 2 playlist-description.txt || true; echo '...';
-      CMD="python -u create_playlist.py --append-to-name 'P3 (Updated live)' --from-dr-day p3 today --processed-urls-file processed_urls.txt --image-path DRP3_logo.jpeg --skip-existing --retention-days 7 -m 300${DEBUG_SCRAPE:+ --debug-scrape} -d \"$(cat playlist-description.txt)\"";
-      echo "[compose] Exec: $CMD";
-      eval "$CMD"
+      echo "[compose] Exec: python -u create_playlist.py …";
+      python -u create_playlist.py \
+        --append-to-name 'P3 (Updated live)' \
+        --from-dr-day p3 today \
+        --processed-urls-file processed_urls.txt \
+        --image-path DRP3_logo.jpeg \
+        --skip-existing --retention-days 7 -m 300${DEBUG_SCRAPE:+ --debug-scrape} \
+        -d "$$(cat playlist-description.txt)"
     restart: "no"
