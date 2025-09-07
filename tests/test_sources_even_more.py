@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-
 import spotify_playlist.sources as S
 
 
@@ -13,7 +11,9 @@ def test_get_playlist_track_uris_zero_max_breaks_early():
             # Should not be called when max_tracks == 0
             raise AssertionError("playlist_items should not be called")
 
-    out = S.get_playlist_track_uris(FakeSp(), "plid", max_tracks=0)  # type: ignore[arg-type]
+    out = S.get_playlist_track_uris(  # type: ignore[arg-type]
+        FakeSp(), "plid", max_tracks=0
+    )
     assert out == []
 
 
@@ -72,7 +72,9 @@ def test_onlineradiobox_generic_fallback_and_time_strip(monkeypatch):
         def raise_for_status(self):  # noqa: D401
             return None
 
-    monkeypatch.setattr(S.requests, "get", lambda u, headers=None, timeout=20: FakeResp(html))
+    monkeypatch.setattr(
+        S.requests, "get", lambda u, headers=None, timeout=20: FakeResp(html)
+    )
     out = S.get_track_queries_from_onlineradiobox("https://orb")
     assert out == ["Foo - Bar", "Baz - Quux"]
 
@@ -83,4 +85,3 @@ def test_extract_from_any_json_scripts_skips_non_json():
     soup = BeautifulSoup("<script>var x = 1;</script>", "lxml")
     out = S._extract_from_any_json_scripts(soup)  # type: ignore[attr-defined]
     assert out == []
-

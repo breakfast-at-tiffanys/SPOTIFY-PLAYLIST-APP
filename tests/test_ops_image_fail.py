@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from spotify_playlist.ops import upload_playlist_image
 
 
 class DummySp:
-    def playlist_upload_cover_image(self, playlist_id: str, image_b64: str) -> None:  # noqa: D401,E501
+    def playlist_upload_cover_image(
+        self, playlist_id: str, image_b64: str
+    ) -> None:  # noqa: D401,E501
         return None
 
 
@@ -31,4 +31,3 @@ def test_upload_image_bad_extension(tmp_path):
     png.write_bytes(b"not-a-jpeg")
     with pytest.raises(ValueError):
         upload_playlist_image(DummySp(), "pl", str(png))
-
