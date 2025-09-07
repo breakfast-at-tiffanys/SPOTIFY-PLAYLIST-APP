@@ -67,6 +67,8 @@ jobs:
             fi
           done
           mkdir -p "$BASE_DIR/cache"
+          # Ensure token file exists for file-to-file bind mount
+          touch "$BASE_DIR/cache/.cache"
           touch "$BASE_DIR/processed_urls.txt"
           chown -R "$USER":"$USER" "$BASE_DIR"
 
@@ -75,6 +77,7 @@ jobs:
           IMAGE: ghcr.io/${{ env.REPO_LC }}:latest
           SPOTIFY_BASE_DIR: ${{ env.BASE_DIR }}
           SPOTIFY_ENV_FILE: ${{ env.ENV_FILE }}
+          DEBUG_SCRAPE: '1'
         shell: bash
         run: |
           set -euo pipefail
