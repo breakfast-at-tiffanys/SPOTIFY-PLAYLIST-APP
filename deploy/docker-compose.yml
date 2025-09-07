@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   app:
     image: ${IMAGE}
@@ -12,10 +10,10 @@ services:
     # Run the updater once on start; scheduling can be handled by host cron.
     command: >
       bash -lc "python create_playlist.py
-      --append-to-name 'P3 (Updated hourly)'
+      --append-to-name 'P3 (Updated live)'
       --from-dr-day p3 today
       --processed-urls-file processed_urls.txt
       --image-path DRP3_logo.jpeg
-      --keep-duplicates --skip-existing --retention-days 7 -m 300
+      --skip-existing --retention-days 7 -m 300
       -d \"$(cat playlist-description.txt)\""
     restart: "no"
