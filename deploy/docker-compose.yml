@@ -5,6 +5,7 @@ services:
     environment:
       # When set to any non-empty value, adds --debug-scrape to the CLI
       - DEBUG_SCRAPE=${DEBUG_SCRAPE:-}
+      - PYTHONUNBUFFERED=1
     env_file:
       - ${SPOTIFY_ENV_FILE:-/opt/spotify/.env}
     volumes:
@@ -12,11 +13,12 @@ services:
       - ${SPOTIFY_BASE_DIR:-/opt/spotify}/processed_urls.txt:/app/processed_urls.txt
     # Run the updater once on start; scheduling can be handled by host cron.
     command: >
-      python create_playlist.py
-      --append-to-name 'P3 (Updated live)'
-      --from-dr-day p3 today
-      --processed-urls-file processed_urls.txt
-      --image-path DRP3_logo.jpeg
-      --skip-existing --retention-days 7 -m 300${DEBUG_SCRAPE:+ --debug-scrape}
-      -d "$(cat playlist-description.txt)"
+      set -euo pipefail;
+      echo "[compose] Running python create_playlist.py at $(date -Iseconds)";
+      python -V;
+      echo "[compose] CWD=$(pwd)";
+      echo "[compose] Description preview:"; head -n 2 playlist-description.txt || true; echo '...';
+      CMD="python -u create_playlist.py --append-to-name 'P3 (Updated live)' --from-dr-day p3 today --processed-urls-file processed_urls.txt --image-path DRP3_logo.jpeg --skip-existing --retention-days 7 -m 300${DEBUG_SCRAPE:+ --debug-scrape} -d \"$(cat playlist-description.txt)\"";
+      echo "[compose] Exec: $CMD";
+      eval "$CMD"
     restart: "no"
