@@ -109,7 +109,14 @@ jobs:
         run: |
           set -euo pipefail
           IMAGE="$IMAGE" SPOTIFY_BASE_DIR="$SPOTIFY_BASE_DIR" SPOTIFY_ENV_FILE="$SPOTIFY_ENV_FILE" DEBUG_SCRAPE="$DEBUG_SCRAPE" docker compose -f deploy/docker-compose.yml create app
-          cid=$(docker compose -f deploy/docker-compose.yml ps -q app)
+          # include non-running containers with -a so created containers are listed
+          cid=$(docker compose -f deploy/docker-compose.yml ps -aq app)
+          if [ -z "${cid:-}" ]; then
+            echo "No container ID found after create; showing compose ps -a for context:"
+            docker compose -f deploy/docker-compose.yml ps -a || true
+            # Do not fail the job here; continue to actual run step
+            exit 0
+          fi
           echo "Created container ID: $cid"
           echo "== docker inspect (Entrypoint/Cmd) =="
           docker inspect "$cid" --format='Entrypoint: {{json .Config.Entrypoint}} Cmd: {{json .Config.Cmd}}'
