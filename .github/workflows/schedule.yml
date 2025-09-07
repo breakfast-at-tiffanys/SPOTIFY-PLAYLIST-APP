@@ -67,6 +67,8 @@ jobs:
             fi
           done
           mkdir -p "$BASE_DIR/cache"
+          # Ensure token file exists for file-to-file bind mount
+          touch "$BASE_DIR/cache/.cache"
           touch "$BASE_DIR/processed_urls.txt"
           chown -R "$USER":"$USER" "$BASE_DIR"
 

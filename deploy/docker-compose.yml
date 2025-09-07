@@ -8,7 +8,7 @@ services:
     env_file:
       - ${SPOTIFY_ENV_FILE:-/opt/spotify/.env}
     volumes:
-      - ${SPOTIFY_BASE_DIR:-/opt/spotify}/cache:/app/.cache
+      - ${SPOTIFY_BASE_DIR:-/opt/spotify}/cache/.cache:/app/.cache
       - ${SPOTIFY_BASE_DIR:-/opt/spotify}/processed_urls.txt:/app/processed_urls.txt
     # Run the updater once on start; scheduling can be handled by host cron.
     command: >
