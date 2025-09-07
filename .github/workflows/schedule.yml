@@ -111,7 +111,21 @@ jobs:
           echo "Using image: $IMAGE"
           # Stream logs to console and to a file for artifact upload
           IMAGE="$IMAGE" docker compose -f deploy/docker-compose.yml up \
-            --pull=always --abort-on-container-exit --no-ansi 2>&1 | tee schedule_run.log
+            --pull=always --abort-on-container-exit 2>&1 | tee schedule_run.log
+
+      - name: Post-run diagnostics (ps and last logs)
+        env:
+          IMAGE: ghcr.io/${{ env.REPO_LC }}:latest
+          SPOTIFY_BASE_DIR: ${{ env.BASE_DIR }}
+          SPOTIFY_ENV_FILE: ${{ env.ENV_FILE }}
+          DEBUG_SCRAPE: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "\n== docker compose ps -a ==" | tee -a schedule_run.log
+          IMAGE="$IMAGE" docker compose -f deploy/docker-compose.yml ps -a | tee -a schedule_run.log
+          echo "\n== docker compose logs --tail=200 ==" | tee -a schedule_run.log
+          IMAGE="$IMAGE" docker compose -f deploy/docker-compose.yml logs --tail=200 | tee -a schedule_run.log
 
       - name: Upload run logs
         if: always()
