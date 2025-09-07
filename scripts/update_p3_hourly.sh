@@ -22,7 +22,7 @@ if [ -f "$DESC_FILE" ]; then
 fi
 
 eval python create_playlist.py \
-  --append-to-name "P3 (Updated hourly)" \
+  --append-to-name "P3 (Updated live)" \
   --from-dr-day p3 today \
   --processed-urls-file processed_urls.txt \
   --image-path "DRP3_logo.jpeg" \
