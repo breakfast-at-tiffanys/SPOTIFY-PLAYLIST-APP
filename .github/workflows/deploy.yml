@@ -108,6 +108,8 @@ jobs:
         shell: bash
         run: |
           sudo mkdir -p "$BASE_DIR/cache"
+          # Ensure token file exists for file-to-file bind mount
+          sudo touch "$BASE_DIR/cache/.cache"
           sudo touch "$BASE_DIR/processed_urls.txt"
           sudo chown -R "$USER":"$USER" "$BASE_DIR"
 

@@ -2,10 +2,13 @@ services:
   app:
     image: ${IMAGE}
     working_dir: /app
+    environment:
+      # When set to any non-empty value, adds --debug-scrape to the CLI
+      - DEBUG_SCRAPE=${DEBUG_SCRAPE:-}
     env_file:
       - ${SPOTIFY_ENV_FILE:-/opt/spotify/.env}
     volumes:
-      - ${SPOTIFY_BASE_DIR:-/opt/spotify}/cache:/app/.cache
+      - ${SPOTIFY_BASE_DIR:-/opt/spotify}/cache/.cache:/app/.cache
       - ${SPOTIFY_BASE_DIR:-/opt/spotify}/processed_urls.txt:/app/processed_urls.txt
     # Run the updater once on start; scheduling can be handled by host cron.
     command: >
@@ -14,6 +17,6 @@ services:
       --from-dr-day p3 today
       --processed-urls-file processed_urls.txt
       --image-path DRP3_logo.jpeg
-      --skip-existing --retention-days 7 -m 300
+      --skip-existing --retention-days 7 -m 300${DEBUG_SCRAPE:+ --debug-scrape}
       -d \"$(cat playlist-description.txt)\""
     restart: "no"
