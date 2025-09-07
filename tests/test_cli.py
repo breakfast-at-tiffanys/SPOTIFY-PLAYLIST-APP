@@ -22,7 +22,7 @@ class FakeSp:
         }
 
 
-def test_cli_create_from_dr_day_creates_and_adds(monkeypatch, capsys):
+def test_cli_create_from_dr_day_creates_and_adds(monkeypatch, capsys, tmp_path):
     # Mock sources
     monkeypatch.setattr(
         CLI,
@@ -60,7 +60,20 @@ def test_cli_create_from_dr_day_creates_and_adds(monkeypatch, capsys):
         CLI, "get_spotify_client", lambda cache_path=None: FakeSp("MyList", False)
     )
 
-    rc = CLI.main(["-n", "MyList", "--from-dr-day", "p3", "2025-09-05", "-m", "10"])
+    processed = tmp_path / "processed.txt"
+    rc = CLI.main(
+        [
+            "-n",
+            "MyList",
+            "--from-dr-day",
+            "p3",
+            "2025-09-05",
+            "-m",
+            "10",
+            "--processed-urls-file",
+            str(processed),
+        ]
+    )
     captured = capsys.readouterr()
     assert rc == 0
     assert added == ["uri:a", "uri:b"]

@@ -85,7 +85,7 @@ def test_cli_dr_urls_no_queries_exit_3(monkeypatch, capsys):
     assert "No queries scraped from DR pages." in captured.err
 
 
-def test_cli_from_dr_day_today_debug_prints(monkeypatch, capsys):
+def test_cli_from_dr_day_today_debug_prints(monkeypatch, capsys, tmp_path):
     monkeypatch.setattr(CLI, "get_spotify_client", lambda cache_path=None: DummySp())
     # Return two discovered URLs
     urls = ["https://dr/one", "https://dr/two"]
@@ -99,14 +99,25 @@ def test_cli_from_dr_day_today_debug_prints(monkeypatch, capsys):
     )  # noqa: E501
     monkeypatch.setattr(CLI, "create_playlist", lambda sp, n, d, pub: "pl")
     monkeypatch.setattr(CLI, "add_tracks", lambda *a, **k: None)
+    processed = tmp_path / "processed.txt"
     rc = CLI.main(
-        ["-n", "X", "--from-dr-day", "p3", "today", "--debug-scrape"]
+        [
+            "-n",
+            "X",
+            "--from-dr-day",
+            "p3",
+            "today",
+            "--debug-scrape",
+            "--processed-urls-file",
+            str(processed),
+        ]
     )  # noqa: D401,E501
     captured = capsys.readouterr()
     assert rc == 0
-    # Debug should list discovered URLs
-    assert "DEBUG: Discovered URL: https://dr/one" in captured.err
-    assert "DEBUG: Discovered URL: https://dr/two" in captured.err
+    # Debug should report totals and each new URL
+    assert "DEBUG: Discovered 2 URLs; new=2" in captured.err
+    assert "DEBUG: New URL: https://dr/one" in captured.err
+    assert "DEBUG: New URL: https://dr/two" in captured.err
 
 
 def test_cli_append_to_name_creates_and_debug_prints(monkeypatch, capsys):
