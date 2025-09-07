@@ -337,7 +337,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                     upload_playlist_image(sp, playlist_id, args.image_path)
                 except Exception as e:  # noqa: BLE001
                     if args.debug_scrape:
-                        print(f"WARN: Failed to upload cover image: {e}", file=sys.stderr)
+                        print(
+                            f"WARN: Failed to upload cover image: {e}", file=sys.stderr
+                        )
             if args.debug_scrape:
                 print(
                     f"DEBUG: Created playlist '{target_name}'",
@@ -391,7 +393,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if uris:
         add_tracks(sp, playlist_id, uris)
         # Record processed DR URLs if any were used
-        if 'used_discovered_urls' in locals() and args.processed_urls_file:
+        if "used_discovered_urls" in locals() and args.processed_urls_file:
             try:
                 _append_processed_urls(args.processed_urls_file, used_discovered_urls)
                 if args.debug_scrape:
