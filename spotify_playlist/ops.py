@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, List, Optional, Protocol, TypedDict, cast
 
@@ -213,3 +215,40 @@ def find_user_playlist_by_name(sp: DiscoveryClient, name: str) -> Optional[str]:
             break
     # Preference order: owned exact > owned ci > non-owned exact > non-owned ci
     return owned_exact or owned_ci or exact or ci
+
+
+class CoverUploadClient(Protocol):
+    def playlist_upload_cover_image(self, playlist_id: str, image_b64: str) -> None: ...
+
+
+def upload_playlist_image(
+    sp: CoverUploadClient, playlist_id: str, image_path: str
+) -> None:
+    """Upload a custom JPEG cover image for a playlist.
+
+    Args:
+        sp: Spotipy-like client with cover upload support.
+        playlist_id: Target playlist ID.
+        image_path: Path to a JPEG image file (<= 256 KB).
+
+    Notes:
+        Spotify requires a JPEG image, Base64-encoded (no data URI prefix),
+        max ~256 KB. This function reads the file and uploads as-is.
+    """
+    if not os.path.isfile(image_path):
+        raise FileNotFoundError(f"Image not found: {image_path}")
+    with open(image_path, "rb") as fh:
+        raw = fh.read()
+    # Validate JPEG and size (Spotify ~256KB max)
+    max_bytes = 256 * 1024
+    if len(raw) > max_bytes:
+        raise ValueError(f"Image too large: {len(raw)} bytes (max {max_bytes})")
+    # JPEG SOI/EOI markers
+    if not (raw.startswith(b"\xff\xd8") and raw.endswith(b"\xff\xd9")):
+        # Fallback: allow .jpg/.jpeg extension if markers missing (some tools omit EOI)
+        _, ext = os.path.splitext(image_path.lower())
+        if ext not in (".jpg", ".jpeg"):
+            raise ValueError("Image must be JPEG (.jpg/.jpeg) for Spotify cover upload")
+    # Encode to Base64 string
+    b64 = base64.b64encode(raw).decode("ascii")
+    sp.playlist_upload_cover_image(playlist_id, b64)
