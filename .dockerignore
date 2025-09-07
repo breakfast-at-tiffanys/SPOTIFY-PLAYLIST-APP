@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# VCS and tooling
+.git/
+.github/
+.pytest_cache/
+htmlcov/
+.cache
+
+# Local env and artifacts
+.env
+*.log
+cover/
+
