@@ -99,6 +99,22 @@ jobs:
           DEBUG_SCRAPE="$DEBUG_SCRAPE" \
           docker compose -f deploy/docker-compose.yml config
 
+      - name: Inspect resolved container command
+        env:
+          IMAGE: ghcr.io/${{ env.REPO_LC }}:latest
+          SPOTIFY_BASE_DIR: ${{ env.BASE_DIR }}
+          SPOTIFY_ENV_FILE: ${{ env.ENV_FILE }}
+          DEBUG_SCRAPE: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cid=$(IMAGE="$IMAGE" SPOTIFY_BASE_DIR="$SPOTIFY_BASE_DIR" SPOTIFY_ENV_FILE="$SPOTIFY_ENV_FILE" DEBUG_SCRAPE="$DEBUG_SCRAPE" docker compose -f deploy/docker-compose.yml create --quiet app)
+          echo "Created container: $cid"
+          echo "== docker inspect (Entrypoint/Cmd) =="
+          docker inspect "$cid" --format='Entrypoint: {{json .Config.Entrypoint}} Cmd: {{json .Config.Cmd}}'
+          echo "== docker rm =="
+          docker rm "$cid" >/dev/null
+
       - name: Run (one-shot) via compose
         env:
           IMAGE: ghcr.io/${{ env.REPO_LC }}:latest
