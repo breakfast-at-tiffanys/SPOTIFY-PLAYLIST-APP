@@ -72,13 +72,17 @@ def test_cli_cover_upload_warn_append_to_name(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(CLI, "get_spotify_client", lambda cache_path=None: sp)
     monkeypatch.setattr(CLI, "find_user_playlist_by_name", lambda spc, n: None)
     monkeypatch.setattr(CLI, "create_playlist", lambda spc, n, d, pub: "pl123")
-    monkeypatch.setattr(CLI, "resolve_track_uris", lambda spc, qs: ["u1"])  # noqa: ARG005
+    monkeypatch.setattr(
+        CLI, "resolve_track_uris", lambda spc, qs: ["u1"]
+    )  # noqa: ARG005
     monkeypatch.setattr(CLI, "add_tracks", lambda spc, plid, uris: None)  # noqa: ARG005
     # Force upload to raise to hit warn path
     import spotify_playlist.ops as OPS
 
     monkeypatch.setattr(
-        OPS, "upload_playlist_image", lambda *a, **k: (_ for _ in ()).throw(ValueError("bad"))
+        OPS,
+        "upload_playlist_image",
+        lambda *a, **k: (_ for _ in ()).throw(ValueError("bad")),
     )
 
     rc = CLI.main(
@@ -103,13 +107,17 @@ def test_cli_cover_upload_warn_name_create(tmp_path, monkeypatch, capsys):
 
     sp = ImgSp()
     monkeypatch.setattr(CLI, "get_spotify_client", lambda cache_path=None: sp)
-    monkeypatch.setattr(CLI, "resolve_track_uris", lambda spc, qs: ["u1"])  # noqa: ARG005
+    monkeypatch.setattr(
+        CLI, "resolve_track_uris", lambda spc, qs: ["u1"]
+    )  # noqa: ARG005
     monkeypatch.setattr(CLI, "add_tracks", lambda spc, plid, uris: None)  # noqa: ARG005
     # Force upload to raise to hit warn path in name-create branch
     import spotify_playlist.ops as OPS
 
     monkeypatch.setattr(
-        OPS, "upload_playlist_image", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("x"))
+        OPS,
+        "upload_playlist_image",
+        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("x")),
     )
 
     rc = CLI.main(
@@ -131,17 +139,25 @@ def test_cli_append_processed_urls_warn(monkeypatch, capsys, tmp_path):
     sp = ImgSp()
     monkeypatch.setattr(CLI, "get_spotify_client", lambda cache_path=None: sp)
     # Discover 1 fresh URL
-    monkeypatch.setattr(CLI, "discover_dr_program_urls", lambda *a, **k: ["https://dr/one"])
+    monkeypatch.setattr(
+        CLI, "discover_dr_program_urls", lambda *a, **k: ["https://dr/one"]
+    )
     monkeypatch.setattr(
         CLI, "get_track_queries_from_dr_urls", lambda *a, **k: ["AR - TT"]
     )
-    monkeypatch.setattr(CLI, "resolve_track_uris", lambda spc, qs: ["u1"])  # noqa: ARG005
+    monkeypatch.setattr(
+        CLI, "resolve_track_uris", lambda spc, qs: ["u1"]
+    )  # noqa: ARG005
     monkeypatch.setattr(CLI, "add_tracks", lambda *a, **k: None)
     # Make processed file exist (but contents don't matter)
     processed = tmp_path / "proc.txt"
     processed.write_text("", encoding="utf-8")
     # Force append to processed URLs to raise to hit warn path
-    monkeypatch.setattr(CLI, "_append_processed_urls", lambda *a, **k: (_ for _ in ()).throw(IOError("disk")))
+    monkeypatch.setattr(
+        CLI,
+        "_append_processed_urls",
+        lambda *a, **k: (_ for _ in ()).throw(IOError("disk")),
+    )
 
     rc = CLI.main(
         [
