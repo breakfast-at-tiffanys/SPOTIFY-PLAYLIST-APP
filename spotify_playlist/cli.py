@@ -146,6 +146,11 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         help="Keep duplicate 'Artist - Title' entries from source (no dedupe)",
     )
     p.add_argument(
+        "--image-path",
+        default=None,
+        help="Optional path to a JPEG cover image to set on newly created playlists",
+    )
+    p.add_argument(
         "--append-to-playlist",
         help="Append to an existing playlist (URL/URI/ID) instead of creating",
     )
@@ -167,6 +172,15 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         help="Skip adding tracks already present in target playlist",
     )
     p.add_argument("--cache", default=None, help="Path to Spotipy token cache file")
+    p.add_argument(
+        "--processed-urls-file",
+        default=os.getenv("PROCESSED_URLS_FILE", "processed_urls.txt"),
+        help=(
+            "Text file storing already-processed DR program URLs. Used with "
+            "--from-dr-day to avoid reprocessing the same URLs. Override "
+            "default via PROCESSED_URLS_FILE env var."
+        ),
+    )
     return p.parse_args(argv)
 
 
@@ -258,9 +272,17 @@ def main(argv: Optional[List[str]] = None) -> int:
                 file=sys.stderr,
             )
             return 3
+        # Determine which URLs are new for debug/record-keeping, but scrape all
+        processed_urls: Set[str] = _load_processed_urls(args.processed_urls_file)
+        fresh_urls = [u for u in urls if u not in processed_urls]
         if args.debug_scrape:
-            for u in urls:
-                print(f"DEBUG: Discovered URL: {u}", file=sys.stderr)
+            print(
+                f"DEBUG: Discovered {len(urls)} URLs; new={len(fresh_urls)}",
+                file=sys.stderr,
+            )
+            for u in fresh_urls:
+                print(f"DEBUG: New URL: {u}", file=sys.stderr)
+        # Scrape all discovered URLs; rely on --skip-existing to avoid duplicates
         queries = get_track_queries_from_dr_urls(
             urls,
             max_tracks=args.max_tracks,
@@ -271,6 +293,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             print("No queries scraped from discovered DR pages.", file=sys.stderr)
             return 3
         uris = resolve_track_uris(sp, queries)
+        used_discovered_urls = fresh_urls
     else:
         print("No input source provided.", file=sys.stderr)
         return 2
@@ -306,6 +329,15 @@ def main(argv: Optional[List[str]] = None) -> int:
             playlist_id = create_playlist(
                 sp, target_name, args.description, args.public  # type: ignore
             )
+            # Optionally set cover image when creating
+            if args.image_path:
+                try:
+                    from .ops import upload_playlist_image
+
+                    upload_playlist_image(sp, playlist_id, args.image_path)
+                except Exception as e:  # noqa: BLE001
+                    if args.debug_scrape:
+                        print(f"WARN: Failed to upload cover image: {e}", file=sys.stderr)
             if args.debug_scrape:
                 print(
                     f"DEBUG: Created playlist '{target_name}'",
@@ -319,6 +351,14 @@ def main(argv: Optional[List[str]] = None) -> int:
             )
             return 2
         playlist_id = create_playlist(sp, args.name, args.description, args.public)
+        if args.image_path:
+            try:
+                from .ops import upload_playlist_image
+
+                upload_playlist_image(sp, playlist_id, args.image_path)
+            except Exception as e:  # noqa: BLE001
+                if args.debug_scrape:
+                    print(f"WARN: Failed to upload cover image: {e}", file=sys.stderr)
 
     # Apply retention policy first.
     if args.retention_days and args.retention_days > 0:
@@ -350,6 +390,21 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if uris:
         add_tracks(sp, playlist_id, uris)
+        # Record processed DR URLs if any were used
+        if 'used_discovered_urls' in locals() and args.processed_urls_file:
+            try:
+                _append_processed_urls(args.processed_urls_file, used_discovered_urls)
+                if args.debug_scrape:
+                    print(
+                        f"DEBUG: Recorded {len(used_discovered_urls)} URLs to "
+                        f"{args.processed_urls_file}",
+                        file=sys.stderr,
+                    )
+            except Exception as e:  # noqa: BLE001
+                print(
+                    f"WARN: Failed to update processed URLs file: {e}",
+                    file=sys.stderr,
+                )
 
     playlist_obj = sp.playlist(playlist_id, fields="external_urls.spotify,name,public")
     # Safely extract fields for Pylance and robustness
@@ -375,3 +430,24 @@ def main(argv: Optional[List[str]] = None) -> int:
         f"{len(uris)} new tracks: {url}"
     )
     return 0
+
+
+def _load_processed_urls(path: str) -> Set[str]:
+    """Load a set of processed URLs from a text file.
+
+    Each line contains a URL; empty lines are ignored.
+    """
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            return {line.strip() for line in fh if line.strip()}
+    except FileNotFoundError:
+        return set()
+
+
+def _append_processed_urls(path: str, urls: List[str]) -> None:
+    """Append URLs to the processed file, one per line."""
+    if not urls:
+        return
+    with open(path, "a", encoding="utf-8") as fh:
+        for u in urls:
+            fh.write(u.strip() + "\n")
