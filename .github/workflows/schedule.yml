@@ -148,6 +148,23 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Job summary (result line)
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          line=$(grep -E "^(Created|Updated) .* playlist '.*' with [0-9]+ new tracks: " -m1 schedule_run.log || true)
+          {
+            echo ""
+            echo "### Result"
+            echo ""
+            if [ -n "$line" ]; then
+              echo "$line"
+            else
+              echo "_No final result line found in logs._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload run logs
         if: always()
         uses: actions/upload-artifact@v4
