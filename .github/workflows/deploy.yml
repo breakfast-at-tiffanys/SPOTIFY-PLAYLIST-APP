@@ -22,6 +22,22 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Normalize repository to lowercase
+        id: repo_lc
+        shell: bash
+        run: |
+          echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Docker meta (normalize image name/tags)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ env.REPO_LC }}
+          tags: |
+            type=raw,value=latest
+            type=sha
+
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
@@ -36,9 +52,15 @@ jobs:
           file: ./Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Select latest image ref
+        id: image
+        shell: bash
+        run: |
+          latest=$(printf "%s\n" "${{ steps.meta.outputs.tags }}" | tr ' ' '\n' | grep ':latest$' | head -n1)
+          echo "image=$latest" >> "$GITHUB_OUTPUT"
 
       - name: Copy compose file to Raspberry Pi
         uses: appleboy/scp-action@v0.1.7
@@ -59,7 +81,7 @@ jobs:
           port: ${{ secrets.PI_PORT || 22 }}
           script: |
             set -euo pipefail
-            IMAGE="ghcr.io/${{ github.repository }}:latest"
+            IMAGE="${{ steps.image.outputs.image }}"
             echo "Logging in to GHCR on remote host"
             echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u ${{ secrets.GHCR_USER }} --password-stdin
             mkdir -p /opt/spotify/cache
@@ -74,4 +96,3 @@ jobs:
     # - Ensure /opt/spotify/.env on the Pi has Spotify credentials.
     # - The service runs once per deploy. For hourly schedule, set up host cron,
     #   e.g., `0 * * * * IMAGE=ghcr.io/owner/repo:latest docker compose -f /opt/spotify/docker-compose.yml up --pull=always --abort-on-container-exit`
-
