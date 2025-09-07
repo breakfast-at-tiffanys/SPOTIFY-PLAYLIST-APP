@@ -1,0 +1,77 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push multi-arch image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+      - name: Copy compose file to Raspberry Pi
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PI_HOST }}
+          username: ${{ secrets.PI_USER }}
+          key: ${{ secrets.PI_SSH_KEY }}
+          port: ${{ secrets.PI_PORT || 22 }}
+          source: "deploy/docker-compose.yml"
+          target: "/opt/spotify/"
+
+      - name: Deploy on Raspberry Pi
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PI_HOST }}
+          username: ${{ secrets.PI_USER }}
+          key: ${{ secrets.PI_SSH_KEY }}
+          port: ${{ secrets.PI_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            IMAGE="ghcr.io/${{ github.repository }}:latest"
+            echo "Logging in to GHCR on remote host"
+            echo ${{ secrets.GHCR_PAT }} | docker login ghcr.io -u ${{ secrets.GHCR_USER }} --password-stdin
+            mkdir -p /opt/spotify/cache
+            touch /opt/spotify/processed_urls.txt
+            cd /opt/spotify
+            IMAGE="$IMAGE" docker compose pull
+            IMAGE="$IMAGE" docker compose up -d
+
+    # Notes:
+    # - Create repo secrets: PI_HOST, PI_USER, PI_SSH_KEY, (optional) PI_PORT.
+    # - Create secrets GHCR_USER and GHCR_PAT (PAT with read:packages) for the Pi.
+    # - Ensure /opt/spotify/.env on the Pi has Spotify credentials.
+    # - The service runs once per deploy. For hourly schedule, set up host cron,
+    #   e.g., `0 * * * * IMAGE=ghcr.io/owner/repo:latest docker compose -f /opt/spotify/docker-compose.yml up --pull=always --abort-on-container-exit`
+
