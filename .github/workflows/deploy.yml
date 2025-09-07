@@ -72,6 +72,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Resolve base dir and env file
+        shell: bash
+        run: |
+          # Allow override via repository variable SPOTIFY_BASE_DIR; fallback to /opt/spotify
+          BASE_DIR="${{ vars.SPOTIFY_BASE_DIR }}"
+          if [ -z "$BASE_DIR" ]; then BASE_DIR="/opt/spotify"; fi
+          echo "BASE_DIR=$BASE_DIR" >> "$GITHUB_ENV"
+          # Allow override of env file via repo variable SPOTIFY_ENV_FILE; fallback to $BASE_DIR/.env
+          ENV_FILE="${{ vars.SPOTIFY_ENV_FILE }}"
+          if [ -z "$ENV_FILE" ]; then ENV_FILE="$BASE_DIR/.env"; fi
+          echo "ENV_FILE=$ENV_FILE" >> "$GITHUB_ENV"
+
       - name: Login to GHCR (if private)
         shell: bash
         run: |
@@ -85,13 +97,15 @@ jobs:
       - name: Prepare persistent directories
         shell: bash
         run: |
-          sudo mkdir -p /opt/spotify/cache
-          sudo touch /opt/spotify/processed_urls.txt
-          sudo chown -R "$USER":"$USER" /opt/spotify
+          sudo mkdir -p "$BASE_DIR/cache"
+          sudo touch "$BASE_DIR/processed_urls.txt"
+          sudo chown -R "$USER":"$USER" "$BASE_DIR"
 
       - name: Pull and start with compose
         env:
           IMAGE: ${{ needs.build-and-push.outputs.image }}
+          SPOTIFY_BASE_DIR: ${{ env.BASE_DIR }}
+          SPOTIFY_ENV_FILE: ${{ env.ENV_FILE }}
         shell: bash
         run: |
           set -euo pipefail

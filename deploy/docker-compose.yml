@@ -5,10 +5,10 @@ services:
     image: ${IMAGE}
     working_dir: /app
     env_file:
-      - /opt/spotify/.env
+      - ${SPOTIFY_ENV_FILE:-/opt/spotify/.env}
     volumes:
-      - /opt/spotify/cache:/app/.cache
-      - /opt/spotify/processed_urls.txt:/app/processed_urls.txt
+      - ${SPOTIFY_BASE_DIR:-/opt/spotify}/cache:/app/.cache
+      - ${SPOTIFY_BASE_DIR:-/opt/spotify}/processed_urls.txt:/app/processed_urls.txt
     # Run the updater once on start; scheduling can be handled by host cron.
     command: >
       bash -lc "python create_playlist.py
@@ -19,4 +19,3 @@ services:
       --keep-duplicates --skip-existing --retention-days 7 -m 300
       -d \"$(cat playlist-description.txt)\""
     restart: "no"
-
