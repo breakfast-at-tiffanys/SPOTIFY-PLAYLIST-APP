@@ -72,6 +72,57 @@ jobs:
           touch "$BASE_DIR/processed_urls.txt"
           chown -R "$USER":"$USER" "$BASE_DIR"
 
+      - name: Diagnostics (runner, docker, compose config)
+        env:
+          IMAGE: ghcr.io/${{ env.REPO_LC }}:latest
+          SPOTIFY_BASE_DIR: ${{ env.BASE_DIR }}
+          SPOTIFY_ENV_FILE: ${{ env.ENV_FILE }}
+          DEBUG_SCRAPE: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "== Runner user =="
+          whoami
+          id
+          echo "== Docker versions =="
+          docker version || true
+          docker compose version || true
+          echo "== Resolved variables =="
+          echo "IMAGE=$IMAGE"
+          echo "SPOTIFY_BASE_DIR=$SPOTIFY_BASE_DIR"
+          echo "SPOTIFY_ENV_FILE=$SPOTIFY_ENV_FILE"
+          echo "DEBUG_SCRAPE=$DEBUG_SCRAPE"
+          echo "== Compose config (with env applied) =="
+          IMAGE="$IMAGE" \
+          SPOTIFY_BASE_DIR="$SPOTIFY_BASE_DIR" \
+          SPOTIFY_ENV_FILE="$SPOTIFY_ENV_FILE" \
+          DEBUG_SCRAPE="$DEBUG_SCRAPE" \
+          docker compose -f deploy/docker-compose.yml config
+
+      - name: Inspect resolved container command
+        env:
+          IMAGE: ghcr.io/${{ env.REPO_LC }}:latest
+          SPOTIFY_BASE_DIR: ${{ env.BASE_DIR }}
+          SPOTIFY_ENV_FILE: ${{ env.ENV_FILE }}
+          DEBUG_SCRAPE: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE="$IMAGE" SPOTIFY_BASE_DIR="$SPOTIFY_BASE_DIR" SPOTIFY_ENV_FILE="$SPOTIFY_ENV_FILE" DEBUG_SCRAPE="$DEBUG_SCRAPE" docker compose -f deploy/docker-compose.yml create app
+          # include non-running containers with -a so created containers are listed
+          cid=$(docker compose -f deploy/docker-compose.yml ps -aq app)
+          if [ -z "${cid:-}" ]; then
+            echo "No container ID found after create; showing compose ps -a for context:"
+            docker compose -f deploy/docker-compose.yml ps -a || true
+            # Do not fail the job here; continue to actual run step
+            exit 0
+          fi
+          echo "Created container ID: $cid"
+          echo "== docker inspect (Entrypoint/Cmd) =="
+          docker inspect "$cid" --format='Entrypoint: {{json .Config.Entrypoint}} Cmd: {{json .Config.Cmd}}'
+          echo "== docker rm =="
+          docker rm "$cid" >/dev/null 2>&1 || true
+
       - name: Run (one-shot) via compose
         env:
           IMAGE: ghcr.io/${{ env.REPO_LC }}:latest
@@ -82,4 +133,99 @@ jobs:
         run: |
           set -euo pipefail
           echo "Using image: $IMAGE"
-          IMAGE="$IMAGE" docker compose -f deploy/docker-compose.yml up --pull=always --abort-on-container-exit
+          # Stream logs to console and to a file for artifact upload
+          IMAGE="$IMAGE" docker compose -f deploy/docker-compose.yml up \
+            --pull=always --abort-on-container-exit 2>&1 | tee schedule_run.log
+
+      - name: Post-run diagnostics (ps and last logs)
+        env:
+          IMAGE: ghcr.io/${{ env.REPO_LC }}:latest
+          SPOTIFY_BASE_DIR: ${{ env.BASE_DIR }}
+          SPOTIFY_ENV_FILE: ${{ env.ENV_FILE }}
+          DEBUG_SCRAPE: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "\n== docker compose ps -a ==" | tee -a schedule_run.log
+          IMAGE="$IMAGE" docker compose -f deploy/docker-compose.yml ps -a | tee -a schedule_run.log
+          echo "\n== docker compose logs --tail=200 ==" | tee -a schedule_run.log
+          IMAGE="$IMAGE" docker compose -f deploy/docker-compose.yml logs --tail=200 | tee -a schedule_run.log
+
+      - name: Job summary (tail of logs)
+        if: always()
+        env:
+          IMAGE: ghcr.io/${{ env.REPO_LC }}:latest
+          SPOTIFY_BASE_DIR: ${{ env.BASE_DIR }}
+          SPOTIFY_ENV_FILE: ${{ env.ENV_FILE }}
+        shell: bash
+        run: |
+          {
+            echo "### Scheduled Run Summary"
+            echo ""
+            echo "Image: $IMAGE"
+            echo "Base dir: $SPOTIFY_BASE_DIR"
+            echo "Env file: $SPOTIFY_ENV_FILE"
+            echo ""
+            echo "Last 200 log lines:" 
+            echo '```text'
+            tail -n 200 schedule_run.log || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Job summary (result line)
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          line=$(grep -E "^(Created|Updated) .* playlist '.*' with [0-9]+ new tracks: " -m1 schedule_run.log || true)
+          {
+            echo ""
+            echo "### Result"
+            echo ""
+            if [ -n "$line" ]; then
+              echo "$line"
+            else
+              echo "_No final result line found in logs._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Analyze counts and warn on zero additions
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          line=$(grep -E "^(Created|Updated) .* playlist '.*' with [0-9]+ new tracks: " -m1 schedule_run.log || true)
+          num=""
+          if [ -n "$line" ]; then
+            num=$(echo "$line" | sed -E 's/.* with ([0-9]+) new tracks:.*/\1/')
+          fi
+          if [ "${num:-}" = "0" ]; then
+            echo "::warning::No new tracks were added in this run (0)."
+          fi
+          discovery=$(grep -E "^DEBUG: Discovered [0-9]+ .*|^DEBUG: New URL:" schedule_run.log || true)
+          counts=$(grep -E "^DEBUG: .* -> (NEXT_DATA|JSON-LD|DOM label|Any-JSON|Regex).*: [0-9]+" schedule_run.log || true)
+          {
+            echo ""
+            echo "### URL Discovery and Extraction Counts"
+            echo ""
+            if [ -n "$discovery" ]; then
+              echo "Discovery:"
+              echo '```text'
+              echo "$discovery"
+              echo '```'
+            fi
+            if [ -n "$counts" ]; then
+              echo "Extraction per-URL (by method):"
+              echo '```text'
+              echo "$counts"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload run logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: schedule-run-logs-${{ github.run_number }}-${{ github.run_attempt }}
+          path: schedule_run.log
+          retention-days: 7
