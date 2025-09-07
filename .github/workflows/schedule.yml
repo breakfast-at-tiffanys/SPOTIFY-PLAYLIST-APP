@@ -109,4 +109,13 @@ jobs:
         run: |
           set -euo pipefail
           echo "Using image: $IMAGE"
-          IMAGE="$IMAGE" docker compose -f deploy/docker-compose.yml up --pull=always --abort-on-container-exit
+          # Stream logs to console and to a file for artifact upload
+          IMAGE="$IMAGE" docker compose -f deploy/docker-compose.yml up \
+            --pull=always --abort-on-container-exit --no-ansi 2>&1 | tee schedule_run.log
+
+      - name: Upload run logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: schedule-run-logs
+          path: schedule_run.log
