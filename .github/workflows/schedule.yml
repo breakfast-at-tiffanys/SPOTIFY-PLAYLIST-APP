@@ -72,6 +72,33 @@ jobs:
           touch "$BASE_DIR/processed_urls.txt"
           chown -R "$USER":"$USER" "$BASE_DIR"
 
+      - name: Diagnostics (runner, docker, compose config)
+        env:
+          IMAGE: ghcr.io/${{ env.REPO_LC }}:latest
+          SPOTIFY_BASE_DIR: ${{ env.BASE_DIR }}
+          SPOTIFY_ENV_FILE: ${{ env.ENV_FILE }}
+          DEBUG_SCRAPE: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "== Runner user =="
+          whoami
+          id
+          echo "== Docker versions =="
+          docker version || true
+          docker compose version || true
+          echo "== Resolved variables =="
+          echo "IMAGE=$IMAGE"
+          echo "SPOTIFY_BASE_DIR=$SPOTIFY_BASE_DIR"
+          echo "SPOTIFY_ENV_FILE=$SPOTIFY_ENV_FILE"
+          echo "DEBUG_SCRAPE=$DEBUG_SCRAPE"
+          echo "== Compose config (with env applied) =="
+          IMAGE="$IMAGE" \
+          SPOTIFY_BASE_DIR="$SPOTIFY_BASE_DIR" \
+          SPOTIFY_ENV_FILE="$SPOTIFY_ENV_FILE" \
+          DEBUG_SCRAPE="$DEBUG_SCRAPE" \
+          docker compose -f deploy/docker-compose.yml config
+
       - name: Run (one-shot) via compose
         env:
           IMAGE: ghcr.io/${{ env.REPO_LC }}:latest
