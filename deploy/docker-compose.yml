@@ -13,7 +13,7 @@ services:
       - ${SPOTIFY_BASE_DIR:-/opt/spotify}/processed_urls.txt:/app/processed_urls.txt
     # Run the updater once on start; scheduling can be handled by host cron.
     command: >
-      set -euo pipefail;
+      set -euxo pipefail;
       echo "[compose] Running python create_playlist.py at $(date -Iseconds)";
       python -V;
       echo "[compose] CWD=$(pwd)";
