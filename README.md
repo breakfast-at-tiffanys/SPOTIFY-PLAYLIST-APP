@@ -37,13 +37,17 @@ Rolling P3 playlist (recommended):
 python create_playlist.py \
   -n "P3 (Updated daily)" \
   --public \
+  --image-path DRP3_logo.jpeg \
+  -d "$(cat playlist-description.txt)" \
   --from-dr-day p3 $(date +%F) \
   --keep-duplicates --skip-existing --retention-days 7 -m 300
 
 # Daily append (use the playlist by name)
 python create_playlist.py \
   --append-to-name "P3 (Updated daily)" \
-  --from-dr-day p3 $(date +%F) \
+  --from-dr-day p3 today \
+  --image-path DRP3_logo.jpeg \
+  -d "$(cat playlist-description.txt)" \
   --keep-duplicates --skip-existing --retention-days 7 -m 300
 ```
 
@@ -59,10 +63,67 @@ SHELL=/bin/bash
 * 23 * * * cd /home/pi/spotify-playlist-app && \
   /home/pi/spotify-playlist-app/.venv/bin/python create_playlist.py \
   --append-to-name "P3 (Updated daily)" \
-  --from-dr-day p3 $(date +\%F) \
+  --from-dr-day p3 today \
   --keep-duplicates --skip-existing --retention-days 7 -m 300 \
   >> cron.log 2>&1
 ```
+
+Or use the helper script (auto git pull + run):
+
+```
+chmod +x scripts/update_p3_daily.sh
+scripts/update_p3_daily.sh
+```
+
+Systemd timer ExecStart can call the script directly:
+
+```
+ExecStart=/bin/bash -lc '/home/pi/spotify-playlist-app/scripts/update_p3_daily.sh'
+```
+
+Hourly updates with URL de-duplication
+- The app now supports a processed-URL state file to avoid reprocessing the
+  same DR program page multiple times when you run it hourly.
+- Use the hourly helper script:
+
+```
+chmod +x scripts/update_p3_hourly.sh
+scripts/update_p3_hourly.sh
+```
+
+- This writes seen URLs to `processed_urls.txt`. You can clear this file if
+  you want to force a full reprocess for a day.
+
+- Example systemd timer for hourly runs:
+
+```
+[Timer]
+OnCalendar=hourly
+Persistent=true
+```
+
+And set ExecStart to the hourly script:
+
+```
+ExecStart=/bin/bash -lc '/home/pi/spotify-playlist-app/scripts/update_p3_hourly.sh'
+```
+
+### Deploy via SSH (one command)
+
+Use the deploy script to sync the repo to your Pi, set up a venv, install
+dependencies, and install/enable the hourly systemd timer.
+
+```
+# From your development machine, with SSH access to the Pi
+PI_USER=pi PI_HOST=raspberrypi.local PI_DIR=/home/pi/spotify-playlist-app \
+  scripts/deploy_pi.sh
+```
+
+Notes:
+- Ensure your `.env` and `.cache` exist in the repo root before deploying, or
+  copy them to the Pi afterward (`scp .env .cache pi@raspberrypi.local:/home/pi/spotify-playlist-app/`).
+- Re-run the deploy script any time you update the code; it will rsync changes
+  and keep the timer enabled.
 
 Notes for Pi:
 - First run requires authorizing the Spotify app. If headless, you can run the
