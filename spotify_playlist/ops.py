@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from typing import Any, List, Optional, Protocol, TypedDict, cast
 import base64
 import os
+from datetime import datetime, timedelta, timezone
+from typing import Any, List, Optional, Protocol, TypedDict, cast
 
 from .core import to_batches
 
@@ -221,7 +221,9 @@ class CoverUploadClient(Protocol):
     def playlist_upload_cover_image(self, playlist_id: str, image_b64: str) -> None: ...
 
 
-def upload_playlist_image(sp: CoverUploadClient, playlist_id: str, image_path: str) -> None:
+def upload_playlist_image(
+    sp: CoverUploadClient, playlist_id: str, image_path: str
+) -> None:
     """Upload a custom JPEG cover image for a playlist.
 
     Args:
@@ -242,7 +244,7 @@ def upload_playlist_image(sp: CoverUploadClient, playlist_id: str, image_path: s
     if len(raw) > max_bytes:
         raise ValueError(f"Image too large: {len(raw)} bytes (max {max_bytes})")
     # JPEG SOI/EOI markers
-    if not (raw.startswith(b"\xFF\xD8") and raw.endswith(b"\xFF\xD9")):
+    if not (raw.startswith(b"\xff\xd8") and raw.endswith(b"\xff\xd9")):
         # Fallback: allow .jpg/.jpeg extension if markers missing (some tools omit EOI)
         _, ext = os.path.splitext(image_path.lower())
         if ext not in (".jpg", ".jpeg"):
