@@ -1,18 +1,18 @@
-# Spotify Playlist App (Python CLI)
+# Spotify Playlist App (Python CLI) 🎧🎶
 
-Automate a rolling Spotify playlist with the songs played on DR P3 each day.
-This tool discovers all P3 program playlist pages for a given date, extracts
-tracks, resolves them on Spotify, and appends them to your rolling playlist.
-It can also remove items older than N days to keep the list fresh.
+Automate a rolling Spotify playlist with the songs played on DR P3. 🎵
+The app discovers P3 program playlist pages for a date, extracts tracks,
+resolves them on Spotify, and appends only new songs to your playlist.
+It also removes items older than N days to keep the list fresh.
 
-## Prerequisites
+## Prerequisites 🔑
 
 - Python 3.9+
 - A Spotify Developer application
   - Create one at https://developer.spotify.com/dashboard
   - Add a Redirect URI (e.g. `http://127.0.0.1:8888/callback`)
 
-## Setup
+## Setup 🔧
 
 1. Clone or open this folder in your IDE.
 2. Copy `.env.example` to `.env` and fill in your credentials:
@@ -28,30 +28,41 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## Usage
+## Minimal Working Example (MVE) 🚀
 
-Rolling P3 playlist (recommended):
+Create or append to a playlist with a single query (no scraping) — this proves
+your credentials and token cache work:
 
 ```bash
-# One-time (create playlist, make it public)
 python create_playlist.py \
-  -n "P3 (Updated daily)" \
+  --append-to-name "MVE Test" \
+  --queries "Daft Punk - One More Time"
+```
+
+On first run, a browser window opens to authorize the app. After approving, tokens are cached in `.cache` (or your custom `--cache` path).
+
+## Rolling P3 Playlist (local Python) 🔁🎵
+
+Append new tracks from today’s P3 pages to a rolling playlist and retain only the last 7 days:
+
+```bash
+# First create (public) with cover + description
+python create_playlist.py \
+  -n "P3 (Updated live)" \
   --public \
   --image-path DRP3_logo.jpeg \
   -d "$(cat playlist-description.txt)" \
   --from-dr-day p3 $(date +%F) \
-  --keep-duplicates --skip-existing --retention-days 7 -m 300
+  --skip-existing --retention-days 7 -m 300
 
-# Daily append (use the playlist by name)
+# Subsequent appends by name (today)
 python create_playlist.py \
-  --append-to-name "P3 (Updated daily)" \
+  --append-to-name "P3 (Updated live)" \
   --from-dr-day p3 today \
   --image-path DRP3_logo.jpeg \
   -d "$(cat playlist-description.txt)" \
-  --keep-duplicates --skip-existing --retention-days 7 -m 300
+  --skip-existing --retention-days 7 -m 300
 ```
-
-On first run, a browser window opens to authorize the app. After approving, tokens are cached in `.cache` (or your custom `--cache` path).
 
 ## Automate on Raspberry Pi
 
@@ -64,7 +75,7 @@ SHELL=/bin/bash
   /home/pi/spotify-playlist-app/.venv/bin/python create_playlist.py \
   --append-to-name "P3 (Updated daily)" \
   --from-dr-day p3 today \
-  --keep-duplicates --skip-existing --retention-days 7 -m 300 \
+  --skip-existing --retention-days 7 -m 300 \
   >> cron.log 2>&1
 ```
 
@@ -130,17 +141,64 @@ Notes for Pi:
   tool on a laptop once to generate `.cache`, then copy that file to the Pi.
 - If you later change scopes, delete `.cache` and re-authorize once.
 
-## Notes
+## Docker: One‑Shot Runs 🐳
+
+You can run the CLI in Docker. Prepare:
+
+1) `.env` with Spotify credentials (on host)
+2) Token file on host (or authenticate once inside the container)
+   - Host token path (file): `/path/to/cache/.cache`
+
+Minimal one‑shot (queries):
+
+```bash
+docker run --rm \
+  --env-file /path/to/.env \
+  -v /path/to/cache/.cache:/app/.cache \
+  ghcr.io/<owner>/<repo>:latest \
+  python -u create_playlist.py \
+    --append-to-name "MVE Test" \
+    --queries "Daft Punk - One More Time"
+```
+
+P3 (today) one‑shot:
+
+```bash
+docker run --rm \
+  --env-file /path/to/.env \
+  -v /path/to/cache/.cache:/app/.cache \
+  -v /path/to/processed_urls.txt:/app/processed_urls.txt \
+  ghcr.io/<owner>/<repo>:latest \
+  python -u create_playlist.py \
+    --append-to-name "P3 (Updated live)" \
+    --from-dr-day p3 today \
+    --image-path DRP3_logo.jpeg \
+    --skip-existing --retention-days 7 -m 300
+```
+
+First‑time auth in Docker (headless):
+
+```bash
+docker run --rm -p 8888:8888 \
+  --env-file /path/to/.env \
+  -v /path/to/cache/.cache:/app/.cache \
+  ghcr.io/<owner>/<repo>:latest \
+  python -c "from spotify_playlist.core import get_spotify_client; get_spotify_client(); print('OK')"
+```
+
+Open the URL printed by the container and complete the login once. The token is saved to the bound `/path/to/cache/.cache` file.
+
+## Notes 📌
 
 - Scopes requested:
   - `playlist-modify-private`, `playlist-modify-public`
   - `playlist-read-private`, `playlist-read-collaborative`
   - `ugc-image-upload`, `user-library-read`
-- The script resolves free-text queries to the top search result; use Spotify
-  track URLs for exact versions.
+- The script resolves free‑text queries to the top search result; provide Spotify
+  track URLs/URIs for exact versions.
 - Rate limits: tracks are added in batches of 100.
 
-## Troubleshooting
+## Troubleshooting 🛠️
 
 - Redirect URI mismatch: Ensure the URI in `.env` matches your Spotify app.
 - Token/cache issues: delete `.cache` (or your `--cache` path) and retry.
