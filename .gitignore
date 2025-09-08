@@ -209,3 +209,7 @@ __marimo__/
 # User added artifacts
 .env
 processed_urls.txt
+**/.env
+cache/
+**/.cache
+process-documentation.md
