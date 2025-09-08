@@ -1,9 +1,7 @@
 name: Scheduled Run
 
 on:
-  schedule:
-    # Runs every 10 minutes (UTC)
-    - cron: '*/10 * * * *'
+
   workflow_dispatch:
 
 permissions:
