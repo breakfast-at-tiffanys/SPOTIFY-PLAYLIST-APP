@@ -210,7 +210,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     load_dotenv()
     args = parse_args(argv or sys.argv[1:])
     # Effective description can come from flag, env var, or file path env.
-    # Priority: --description > PLAYLIST_DESCRIPTION > PLAYLIST_DESCRIPTION_FILE contents > "".
+    # Priority:
+    # --description > PLAYLIST_DESCRIPTION > PLAYLIST_DESCRIPTION_FILE contents > "".
     effective_description = args.description or os.getenv("PLAYLIST_DESCRIPTION", "")
     if not effective_description:
         desc_file = os.getenv("PLAYLIST_DESCRIPTION_FILE")
@@ -367,7 +368,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 except Exception as e:  # noqa: BLE001
                     if args.debug_scrape:
                         print(
-                            f"WARN: Failed to upload cover image on existing playlist: {e}",
+                            f"WARN: Failed to upload cover image on playlist: {e}",
                             file=sys.stderr,
                         )
         else:
