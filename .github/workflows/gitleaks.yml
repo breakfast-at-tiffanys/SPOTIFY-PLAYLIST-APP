@@ -3,6 +3,10 @@ name: Secret Scan (Gitleaks)
 on:
   pull_request:
     branches: [ main ]
+
+permissions:
+  contents: read
+  pull-requests: read
   workflow_dispatch:
 
 jobs:
@@ -16,5 +20,7 @@ jobs:
 
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: detect --source . --redact --exit-code 1
