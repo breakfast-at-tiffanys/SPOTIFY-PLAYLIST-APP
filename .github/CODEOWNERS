@@ -1,0 +1,22 @@
+# CODEOWNERS
+# These owners will be automatically requested for review when someone opens a
+# pull request that modifies matching files.
+
+# Docs
+/README.md                                       @breakfast-at-tiffanys
+/documentation.md                                 @breakfast-at-tiffanys
+/dokumentation.md                                 @breakfast-at-tiffanys
+/architecture.md                                  @breakfast-at-tiffanys
+/process-documentation.md                         @breakfast-at-tiffanys
+
+# App code
+/spotify_playlist/                                @breakfast-at-tiffanys
+/deploy/                                          @breakfast-at-tiffanys
+/scripts/                                         @breakfast-at-tiffanys
+
+# Workflows and CI
+/.github/workflows/                               @breakfast-at-tiffanys
+
+# Catch‑all (everything else)
+*                                                @breakfast-at-tiffanys
+
