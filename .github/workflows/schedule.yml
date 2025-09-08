@@ -166,7 +166,7 @@ jobs:
             echo "Base dir: $SPOTIFY_BASE_DIR"
             echo "Env file: $SPOTIFY_ENV_FILE"
             echo ""
-            echo "Last 200 log lines:" 
+            echo "Last 200 log lines:"
             echo '```text'
             tail -n 200 schedule_run.log || true
             echo '```'

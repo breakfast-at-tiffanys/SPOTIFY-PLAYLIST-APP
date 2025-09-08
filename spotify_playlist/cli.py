@@ -173,6 +173,14 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     )
     p.add_argument("--cache", default=None, help="Path to Spotipy token cache file")
     p.add_argument(
+        "--set-image-always",
+        action="store_true",
+        help=(
+            "Attempt to upload --image-path even when appending to an existing "
+            "playlist (owner-only). By default, images are only set on create."
+        ),
+    )
+    p.add_argument(
         "--processed-urls-file",
         default=os.getenv("PROCESSED_URLS_FILE", "processed_urls.txt"),
         help=(
@@ -201,6 +209,20 @@ def main(argv: Optional[List[str]] = None) -> int:
     """
     load_dotenv()
     args = parse_args(argv or sys.argv[1:])
+    # Effective description can come from flag, env var, or file path env.
+    # Priority:
+    # --description > PLAYLIST_DESCRIPTION > PLAYLIST_DESCRIPTION_FILE contents > "".
+    effective_description = args.description or os.getenv("PLAYLIST_DESCRIPTION", "")
+    if not effective_description:
+        desc_file = os.getenv("PLAYLIST_DESCRIPTION_FILE")
+        if desc_file:
+            try:
+                with open(desc_file, "r", encoding="utf-8") as fh:
+                    txt = fh.read().strip()
+                    effective_description = txt
+            except Exception:
+                # Silently ignore if file not readable; proceed without description
+                effective_description = ""
     sp = get_spotify_client(cache_path=args.cache)
 
     uris: List[str] = []
@@ -320,14 +342,38 @@ def main(argv: Optional[List[str]] = None) -> int:
                 file=sys.stderr,
             )
             return 4
+        # Optional: set/refresh image on existing playlist if requested
+        if args.image_path and args.set_image_always:
+            try:
+                from .ops import upload_playlist_image
+
+                upload_playlist_image(sp, playlist_id, args.image_path)
+            except Exception as e:  # noqa: BLE001
+                if args.debug_scrape:
+                    print(
+                        f"WARN: Failed to upload cover image on existing playlist: {e}",
+                        file=sys.stderr,
+                    )
     elif args.append_to_name:
         target_name = args.append_to_name
         found_id = find_user_playlist_by_name(sp, target_name)
         if found_id:
             playlist_id = found_id
+            # Optional: set/refresh image if requested
+            if args.image_path and args.set_image_always:
+                try:
+                    from .ops import upload_playlist_image
+
+                    upload_playlist_image(sp, playlist_id, args.image_path)
+                except Exception as e:  # noqa: BLE001
+                    if args.debug_scrape:
+                        print(
+                            f"WARN: Failed to upload cover image on playlist: {e}",
+                            file=sys.stderr,
+                        )
         else:
             playlist_id = create_playlist(
-                sp, target_name, args.description, args.public  # type: ignore
+                sp, target_name, effective_description, args.public  # type: ignore
             )
             # Optionally set cover image when creating
             if args.image_path:
@@ -352,7 +398,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 file=sys.stderr,
             )
             return 2
-        playlist_id = create_playlist(sp, args.name, args.description, args.public)
+        playlist_id = create_playlist(sp, args.name, effective_description, args.public)
         if args.image_path:
             try:
                 from .ops import upload_playlist_image
