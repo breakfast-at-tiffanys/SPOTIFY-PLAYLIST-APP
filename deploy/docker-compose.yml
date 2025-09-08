@@ -4,6 +4,7 @@ services:
     working_dir: /app
     environment:
       - PYTHONUNBUFFERED=1
+      - PLAYLIST_DESCRIPTION_FILE=/app/playlist-description.txt
     env_file:
       - ${SPOTIFY_ENV_FILE:-/opt/spotify/.env}
     volumes:
@@ -23,6 +24,7 @@ services:
       - processed_urls.txt
       - --image-path
       - DRP3_logo.jpeg
+      - --set-image-always
       - --skip-existing
       - --retention-days
       - "7"
