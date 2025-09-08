@@ -2,8 +2,8 @@ name: Scheduled Run
 
 on:
   schedule:
-    # Runs every 10 minutes (UTC)
-    - cron: '*/10 * * * *'
+    # Runs every 15 minutes between 5 and 20:59 (UTC)
+    - cron: '*/15 5-20 * * *'
   workflow_dispatch:
 
 permissions:
@@ -166,7 +166,7 @@ jobs:
             echo "Base dir: $SPOTIFY_BASE_DIR"
             echo "Env file: $SPOTIFY_ENV_FILE"
             echo ""
-            echo "Last 200 log lines:" 
+            echo "Last 200 log lines:"
             echo '```text'
             tail -n 200 schedule_run.log || true
             echo '```'
