@@ -207,5 +207,5 @@ marimo/_lsp/
 __marimo__/
 
 # User added artifacts
-processed_urls.txt
 .env
+processed_urls.txt
