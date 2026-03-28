@@ -66,20 +66,23 @@ python create_playlist.py \
 
 ## Automate on Raspberry Pi
 
-Use cron to run it once per day. Example crontab (runs at 23:59 daily):
+Use cron to run the Docker-based scheduler every 5 minutes. The host script keeps
+the same compose flow as the old GitHub Actions schedule, including env
+resolution, persistent file prep, diagnostics, and log parsing.
 
 ```
 # Edit with: crontab -e
 SHELL=/bin/bash
-* 23 * * * cd /home/pi/spotify-playlist-app && \
-  /home/pi/spotify-playlist-app/.venv/bin/python create_playlist.py \
-  --append-to-name "P3 (Updated daily)" \
-  --from-dr-day p3 today \
-  --skip-existing --retention-days 7 -m 300 \
+*/5 * * * * cd /home/pi/spotify-playlist-app && \
+  /bin/bash ./scripts/run_schedule.sh \
   >> cron.log 2>&1
 ```
 
-Or use the helper script (auto git pull + run):
+The script writes the latest detailed run log to `schedule_run.log`. It will
+auto-detect `IMAGE` from `origin`, or you can export `IMAGE`,
+`SPOTIFY_BASE_DIR`, and `SPOTIFY_ENV_FILE` in the crontab if you need overrides.
+
+If you prefer a local Python run instead of Docker, use the helper script:
 
 ```
 chmod +x scripts/update_p3_daily.sh
@@ -94,7 +97,7 @@ ExecStart=/bin/bash -lc '/home/pi/spotify-playlist-app/scripts/update_p3_daily.s
 
 Hourly updates with URL de-duplication
 - The app now supports a processed-URL state file to avoid reprocessing the
-  same DR program page multiple times when you run it hourly.
+  same DR program page multiple times when you run it repeatedly.
 - Use the hourly helper script:
 
 ```

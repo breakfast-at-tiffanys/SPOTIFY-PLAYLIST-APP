@@ -22,7 +22,8 @@ This document describes the current architecture of the Spotify Playlist App: co
 - GitHub Actions
   - Style/CI: lint + tests/coverage
   - Deploy: build image (GH‑hosted) → deploy on Pi (self‑hosted)
-  - Schedule: run one‑shot every 15 minutes (self‑hosted)
+- Host cron
+  - Runs the one‑shot compose job every 5 minutes on the Pi
 
 ## Runtime Topology
 
@@ -34,8 +35,8 @@ This document describes the current architecture of the Spotify Playlist App: co
 |    ├── cache/.cache            (Spotipy OAuth token, single file)            |
 |    └── processed_urls.txt      (persisted across runs)                       |
 |                                                                               |
-|  GitHub Actions Runner (systemd)                                             |
-|    └── checks out repo to: ~/actions-runner/_work/<repo>/<repo>              |
+|  Host cron                                                                   |
+|    └── */5 * * * * cd /opt/spotify/spotify-playlist-app && run_schedule.sh   |
 |                                                                               |
 |  docker compose up (one‑shot)                                                 |
 |    image: ghcr.io/<owner>/<repo>:latest                                      |
@@ -147,15 +148,15 @@ sequenceDiagram
 - Touches token file + processed file.
 - `docker compose -f deploy/docker-compose.yml pull && up -d` (to deploy image).
 
-### Scheduled Run (Self‑Hosted)
-- Cron: `*/15 5-20 * * *` (every 15 minutes between 05:00 and 20:59 UTC).
+### Scheduled Run (Host cron)
+- Cron: `*/5 * * * *` (every 5 minutes).
 - Diagnostics:
   - Runner user, Docker versions, resolved envs, compose config
   - Optional step: create + inspect a container to print Entrypoint/Cmd
 - One‑shot: `docker compose -f deploy/docker-compose.yml up --pull=always --abort-on-container-exit`
 - Observability:
-  - Streams logs to artifact and embeds last 200 lines in job Summary
-  - Extracts final result line (Created/Updated … with N new tracks)
+  - Streams logs to `schedule_run.log`
+  - Extracts the final result line (Created/Updated … with N new tracks)
   - Warns when N=0; shows discovery and extraction method counts
 
 ## Authentication (OAuth)
@@ -194,7 +195,7 @@ flowchart TB
   subgraph RaspberryPi["Self‑hosted Raspberry Pi"]
     E["Deploy on Pi (self‑hosted)"]
     R["Container on Pi"]
-    D["Scheduled run (*/15, 05:00–20:59 UTC)"]
+    D["Host cron (*/5)"]
   end
 
   GHCR -. "pull" .-> E

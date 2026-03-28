@@ -5,7 +5,7 @@
 - Playlistens navn er “P3 (Updated live)”.
 
 ## Hvad appen gør 🔁
-- Tjekker DR P3 regelmæssigt (hver 15. minut mellem kl. 05:00 og 20:59 (UTC)).
+- Tjekker DR P3 regelmæssigt (hvert 5. minut).
 - Tilføjer nye sange, appen finder, til din Spotify‑playliste.
 - Undgår dubletter og fjerner automatisk numre, der er ældre end 7 dage.
 - Holder playlistens cover og beskrivelse opdateret.
@@ -25,6 +25,6 @@
 ## Nøgleadfærd 📌
 - Kun nye numre: sange, der allerede er på playlisten, springes over.
 - Fokus på det aktuelle: numre ældre end en uge ryddes automatisk.
-- Jævn opdatering: tjekker flere gange i timen i dagtimerne.
+- Jævn opdatering: tjekker hele dagen.
 
 Så enkelt er appen — åbn Spotify og nyd det nyeste musik fra P3 uden at løfte en finger. 🎶

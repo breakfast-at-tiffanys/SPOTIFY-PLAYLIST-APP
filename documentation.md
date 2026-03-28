@@ -5,7 +5,7 @@
 - The playlist is called “P3 (Updated live)”.
 
 ## What it does 🔁
-- Checks DR P3 regularly (every 15 minutes, 05:00–20:59 UTC).
+- Checks DR P3 regularly (every 5 minutes).
 - Adds new songs it finds to your Spotify playlist.
 - Avoids duplicates and automatically removes items older than 7 days.
 - Keeps the playlist cover and description up to date.
@@ -25,6 +25,6 @@
 ## Key behavior 📌
 - New songs only: already‑present tracks are skipped.
 - Recent focus: items older than one week are cleared automatically.
-- Regular refresh: checks multiple times per hour during the day.
+- Regular refresh: checks throughout the day.
 
 That’s it — open Spotify and enjoy the latest P3 music without lifting a finger. 🎶
