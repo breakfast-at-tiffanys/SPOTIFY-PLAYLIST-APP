@@ -32,3 +32,19 @@ services:
       - "300"
       - --debug-scrape
     restart: "no"
+
+  scheduler:
+    image: ${IMAGE}
+    working_dir: /app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PLAYLIST_DESCRIPTION_FILE=/app/playlist-description.txt
+      - SCHEDULE_INTERVAL_SECONDS=${SCHEDULE_INTERVAL_SECONDS:-300}
+    env_file:
+      - ${SPOTIFY_ENV_FILE:-/opt/spotify/.env}
+    volumes:
+      - ${SPOTIFY_BASE_DIR:-/opt/spotify}/cache/.cache:/app/.cache
+      - ${SPOTIFY_BASE_DIR:-/opt/spotify}/processed_urls.txt:/app/processed_urls.txt
+    # Long-running Docker-native scheduler for environments where host cron is not desired.
+    entrypoint: ["bash", "/app/scripts/container_scheduler.sh"]
+    restart: unless-stopped
