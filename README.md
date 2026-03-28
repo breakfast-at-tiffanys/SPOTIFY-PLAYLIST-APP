@@ -82,6 +82,25 @@ The script writes the latest detailed run log to `schedule_run.log`. It will
 auto-detect `IMAGE` from `origin`, or you can export `IMAGE`,
 `SPOTIFY_BASE_DIR`, and `SPOTIFY_ENV_FILE` in the crontab if you need overrides.
 
+If you want the schedule to live inside Docker instead of on the Pi host, use
+the long-running `scheduler` service:
+
+```bash
+mkdir -p /opt/spotify/cache
+touch /opt/spotify/cache/.cache /opt/spotify/processed_urls.txt
+
+export IMAGE=ghcr.io/<owner>/<repo>:latest
+export SPOTIFY_BASE_DIR=/opt/spotify
+export SPOTIFY_ENV_FILE=/opt/spotify/.env
+
+docker compose -f deploy/docker-compose.yml up -d scheduler
+docker compose -f deploy/docker-compose.yml logs -f scheduler
+```
+
+This keeps a single container running and executes the update every 300 seconds
+by default. Override the interval with `SCHEDULE_INTERVAL_SECONDS=600` if you
+want a different cadence.
+
 If you prefer a local Python run instead of Docker, use the helper script:
 
 ```
@@ -190,6 +209,26 @@ docker run --rm -p 8888:8888 \
 ```
 
 Open the URL printed by the container and complete the login once. The token is saved to the bound `/path/to/cache/.cache` file.
+
+Docker-native scheduler:
+
+```bash
+mkdir -p /path/to/cache
+touch /path/to/cache/.cache /path/to/processed_urls.txt
+
+IMAGE=ghcr.io/<owner>/<repo>:latest \
+SPOTIFY_BASE_DIR=/path/to \
+SPOTIFY_ENV_FILE=/path/to/.env \
+SCHEDULE_INTERVAL_SECONDS=300 \
+docker compose -f deploy/docker-compose.yml up -d scheduler
+```
+
+Watch the scheduler:
+
+```bash
+docker compose -f deploy/docker-compose.yml logs -f scheduler
+docker compose -f deploy/docker-compose.yml ps
+```
 
 ## Notes 📌
 
