@@ -2,6 +2,7 @@ services:
   app:
     image: ${IMAGE}
     working_dir: /app
+    profiles: ["oneshot"]
     environment:
       - PYTHONUNBUFFERED=1
       - PLAYLIST_DESCRIPTION_FILE=/app/playlist-description.txt
@@ -36,6 +37,7 @@ services:
   scheduler:
     image: ${IMAGE}
     working_dir: /app
+    profiles: ["scheduler"]
     environment:
       - PYTHONUNBUFFERED=1
       - PLAYLIST_DESCRIPTION_FILE=/app/playlist-description.txt
