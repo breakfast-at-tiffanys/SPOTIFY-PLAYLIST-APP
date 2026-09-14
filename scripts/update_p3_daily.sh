@@ -28,6 +28,7 @@ fi
 eval python create_playlist.py \
   --append-to-name "P3 (Updated daily)" \
   --from-dr-day p3 today \
+  --playlist-id-cache playlist_ids.json \
   --image-path "DRP3_logo.jpeg" \
   ${DESC_ARG} \
   --keep-duplicates --skip-existing --retention-days 7 -m 300

@@ -25,6 +25,7 @@ eval python create_playlist.py \
   --append-to-name "P3 (Updated live)" \
   --from-dr-day p3 today \
   --processed-urls-file processed_urls.txt \
+  --playlist-id-cache playlist_ids.json \
   --image-path "DRP3_logo.jpeg" \
   ${DESC_ARG} \
   --keep-duplicates --skip-existing --retention-days 7 -m 300

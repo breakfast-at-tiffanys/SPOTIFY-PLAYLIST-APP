@@ -14,10 +14,22 @@ jobs:
           cat <<'EOF'
           Playlist updates are no longer scheduled from GitHub Actions.
 
+          Recommended: run the self-contained "scheduler" container (see
+          deploy/docker-compose.yml). It loops internally and needs no host
+          cron at all:
+
+            docker compose -f deploy/docker-compose.yml up -d scheduler
+
+          It updates hourly by default (SCHEDULE_INTERVAL_SECONDS=3600) to
+          avoid overloading the Spotify API. Never also run the "oneshot"
+          app service against the same playlist at the same time - both would
+          race to create it if it doesn't exist yet.
+
+          Alternative: host cron running the one-shot container hourly.
           Install this cron entry on the host that already has the repo checkout,
           Docker, and the Spotify env file:
 
-          */5 * * * * cd /opt/spotify/spotify-playlist-app && /bin/bash ./scripts/run_schedule.sh >> cron.log 2>&1
+          0 * * * * cd /opt/spotify/spotify-playlist-app && /bin/bash ./scripts/run_schedule.sh >> cron.log 2>&1
 
           Optional environment overrides for the cron user:
             IMAGE=ghcr.io/<owner>/<repo>:latest

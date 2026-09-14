@@ -100,6 +100,7 @@ main() {
   mkdir -p "$SPOTIFY_BASE_DIR/cache"
   touch "$SPOTIFY_BASE_DIR/cache/.cache"
   touch "$SPOTIFY_BASE_DIR/processed_urls.txt"
+  touch "$SPOTIFY_BASE_DIR/playlist_ids.json"
   chown -R "$(id -un)":"$(id -gn)" "$SPOTIFY_BASE_DIR" 2>>"$LOG_FILE" || true
 
   {
@@ -133,8 +134,13 @@ main() {
   } | tee -a "$LOG_FILE"
 
   log "Running docker compose one-shot"
+  # Name the "app" service explicitly: it is gated behind the "oneshot"
+  # profile so that `docker compose up` never starts it together with the
+  # long-running "scheduler" service (that double-start used to race both
+  # services to create the playlist independently). Naming a service
+  # bypasses its profile gate for this single invocation.
   docker compose -f deploy/docker-compose.yml up --pull=always --abort-on-container-exit \
-    2>&1 | tee -a "$LOG_FILE"
+    app 2>&1 | tee -a "$LOG_FILE"
   compose_status=${PIPESTATUS[0]}
 
   {

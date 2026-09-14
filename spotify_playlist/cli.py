@@ -7,10 +7,11 @@ creates or updates a target playlist.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from datetime import date, timedelta
-from typing import Any, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 from dotenv import load_dotenv
 
@@ -189,6 +190,16 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
             "default via PROCESSED_URLS_FILE env var."
         ),
     )
+    p.add_argument(
+        "--playlist-id-cache",
+        default=os.getenv("PLAYLIST_ID_CACHE_FILE", "playlist_ids.json"),
+        help=(
+            "JSON file mapping playlist name -> ID. Used with --append-to-name "
+            "so repeated runs reuse the same playlist instead of re-searching "
+            "by name (and risking a duplicate if the search ever misses it). "
+            "Override default via PLAYLIST_ID_CACHE_FILE env var."
+        ),
+    )
     return p.parse_args(argv)
 
 
@@ -356,41 +367,34 @@ def main(argv: Optional[List[str]] = None) -> int:
                     )
     elif args.append_to_name:
         target_name = args.append_to_name
-        found_id = find_user_playlist_by_name(sp, target_name)
-        if found_id:
-            playlist_id = found_id
-            # Optional: set/refresh image if requested
-            if args.image_path and args.set_image_always:
-                try:
-                    from .ops import upload_playlist_image
-
-                    upload_playlist_image(sp, playlist_id, args.image_path)
-                except Exception as e:  # noqa: BLE001
-                    if args.debug_scrape:
-                        print(
-                            f"WARN: Failed to upload cover image on playlist: {e}",
-                            file=sys.stderr,
-                        )
-        else:
-            playlist_id = create_playlist(
-                sp, target_name, effective_description, args.public  # type: ignore
-            )
-            # Optionally set cover image when creating
-            if args.image_path:
-                try:
-                    from .ops import upload_playlist_image
-
-                    upload_playlist_image(sp, playlist_id, args.image_path)
-                except Exception as e:  # noqa: BLE001
-                    if args.debug_scrape:
-                        print(
-                            f"WARN: Failed to upload cover image: {e}", file=sys.stderr
-                        )
-            if args.debug_scrape:
-                print(
-                    f"DEBUG: Created playlist '{target_name}'",
-                    file=sys.stderr,
+        id_cache = _load_playlist_id_cache(args.playlist_id_cache)
+        playlist_id = _valid_cached_playlist_id(sp, id_cache.get(target_name))
+        just_created = False
+        if playlist_id is None:
+            found_id = find_user_playlist_by_name(sp, target_name)
+            if found_id:
+                playlist_id = found_id
+            else:
+                playlist_id = create_playlist(
+                    sp, target_name, effective_description, args.public  # type: ignore
                 )
+                just_created = True
+                if args.debug_scrape:
+                    print(
+                        f"DEBUG: Created playlist '{target_name}'",
+                        file=sys.stderr,
+                    )
+            id_cache[target_name] = playlist_id
+            _save_playlist_id_cache(args.playlist_id_cache, id_cache)
+        # Set the cover image on create, or refresh it when requested.
+        if args.image_path and (just_created or args.set_image_always):
+            try:
+                from .ops import upload_playlist_image
+
+                upload_playlist_image(sp, playlist_id, args.image_path)
+            except Exception as e:  # noqa: BLE001
+                if args.debug_scrape:
+                    print(f"WARN: Failed to upload cover image: {e}", file=sys.stderr)
     else:
         if not args.name:
             print(
@@ -478,6 +482,42 @@ def main(argv: Optional[List[str]] = None) -> int:
         f"{len(uris)} new tracks: {url}"
     )
     return 0
+
+
+def _load_playlist_id_cache(path: str) -> Dict[str, str]:
+    """Load the name -> playlist ID cache from a JSON file.
+
+    Returns an empty dict if the file is missing or invalid.
+    """
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {k: v for k, v in data.items() if isinstance(k, str) and isinstance(v, str)}
+
+
+def _save_playlist_id_cache(path: str, cache: Dict[str, str]) -> None:
+    """Persist the name -> playlist ID cache to a JSON file."""
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(cache, fh)
+
+
+def _valid_cached_playlist_id(sp: Any, playlist_id: Optional[str]) -> Optional[str]:
+    """Return `playlist_id` if it still resolves to an accessible playlist.
+
+    Avoids re-searching by name (and risking a duplicate create if the
+    lookup ever misses, e.g. due to a rename) once a playlist's ID is known.
+    """
+    if not playlist_id:
+        return None
+    try:
+        sp.playlist(playlist_id, fields="id")
+    except Exception:  # noqa: BLE001
+        return None
+    return playlist_id
 
 
 def _load_processed_urls(path: str) -> Set[str]:

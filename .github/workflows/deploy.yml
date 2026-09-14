@@ -111,6 +111,7 @@ jobs:
           # Ensure token file exists for file-to-file bind mount
           sudo touch "$BASE_DIR/cache/.cache"
           sudo touch "$BASE_DIR/processed_urls.txt"
+          sudo touch "$BASE_DIR/playlist_ids.json"
           sudo chown -R "$USER":"$USER" "$BASE_DIR"
 
       - name: Pull and start with compose
@@ -122,12 +123,18 @@ jobs:
         run: |
           set -euo pipefail
           echo "Using image: $IMAGE"
-          IMAGE="$IMAGE" docker compose -f deploy/docker-compose.yml pull
-          IMAGE="$IMAGE" docker compose -f deploy/docker-compose.yml up -d
+          IMAGE="$IMAGE" docker compose -f deploy/docker-compose.yml pull scheduler
+          # Target the "scheduler" service explicitly. Both services carry a
+          # profile (oneshot/scheduler) precisely so a bare `up -d` here can
+          # never start both at once and race to create the playlist twice.
+          IMAGE="$IMAGE" docker compose -f deploy/docker-compose.yml up -d scheduler
 
     # Notes:
     # - Install Docker + Compose plugin on the Pi and register a self-hosted runner
     #   with labels: self-hosted, linux, arm64 (and ensure it's online).
     # - Place Spotify credentials in /opt/spotify/.env on the Pi.
-    # - The service runs once per deploy. For hourly schedule, set up host cron,
-    #   e.g., `0 * * * * IMAGE=ghcr.io/owner/repo:latest docker compose -f /home/runner/<repo>/deploy/docker-compose.yml up --pull=always --abort-on-container-exit`
+    # - The "scheduler" service runs continuously and updates the playlist on
+    #   its own cadence (SCHEDULE_INTERVAL_SECONDS, default 3600s/hourly) - no
+    #   host cron needed. Do not also enable the "oneshot" profile/app service
+    #   against the same playlist; running both concurrently is what used to
+    #   create duplicate playlists.

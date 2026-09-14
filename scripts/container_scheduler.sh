@@ -9,11 +9,13 @@ log() {
   printf '[%s] %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$*"
 }
 
-INTERVAL_SECONDS="${SCHEDULE_INTERVAL_SECONDS:-300}"
+# Hourly by default so we don't hammer the Spotify API.
+INTERVAL_SECONDS="${SCHEDULE_INTERVAL_SECONDS:-3600}"
 PLAYLIST_NAME="${PLAYLIST_NAME:-P3 (Updated live)}"
 DR_PROGRAM="${DR_PROGRAM:-p3}"
 DR_DAY="${DR_DAY:-today}"
 PROCESSED_URLS_FILE="${PROCESSED_URLS_FILE:-processed_urls.txt}"
+PLAYLIST_ID_CACHE_FILE="${PLAYLIST_ID_CACHE_FILE:-playlist_ids.json}"
 PLAYLIST_IMAGE_PATH="${PLAYLIST_IMAGE_PATH:-DRP3_logo.jpeg}"
 RETENTION_DAYS="${RETENTION_DAYS:-7}"
 MAX_TRACKS="${MAX_TRACKS:-300}"
@@ -41,6 +43,7 @@ run_once() {
     --append-to-name "$PLAYLIST_NAME"
     --from-dr-day "$DR_PROGRAM" "$DR_DAY"
     --processed-urls-file "$PROCESSED_URLS_FILE"
+    --playlist-id-cache "$PLAYLIST_ID_CACHE_FILE"
     --image-path "$PLAYLIST_IMAGE_PATH"
     --skip-existing
     --retention-days "$RETENTION_DAYS"
