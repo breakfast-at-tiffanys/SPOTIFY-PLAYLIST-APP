@@ -11,6 +11,7 @@ services:
     volumes:
       - ${SPOTIFY_BASE_DIR:-/opt/spotify}/cache/.cache:/app/.cache
       - ${SPOTIFY_BASE_DIR:-/opt/spotify}/processed_urls.txt:/app/processed_urls.txt
+      - ${SPOTIFY_BASE_DIR:-/opt/spotify}/playlist_ids.json:/app/playlist_ids.json
     # Run the updater once on start; scheduling can be handled by host cron.
     # Use array form to avoid shell interpolation issues; omit description for now.
     entrypoint: ["python", "-u"]
@@ -23,6 +24,8 @@ services:
       - today
       - --processed-urls-file
       - processed_urls.txt
+      - --playlist-id-cache
+      - playlist_ids.json
       - --image-path
       - DRP3_logo.jpeg
       - --set-image-always
@@ -41,12 +44,18 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - PLAYLIST_DESCRIPTION_FILE=/app/playlist-description.txt
-      - SCHEDULE_INTERVAL_SECONDS=${SCHEDULE_INTERVAL_SECONDS:-300}
+      # Hourly by default to avoid overloading the Spotify API; override if needed.
+      - SCHEDULE_INTERVAL_SECONDS=${SCHEDULE_INTERVAL_SECONDS:-3600}
+      - PLAYLIST_ID_CACHE_FILE=/app/playlist_ids.json
     env_file:
       - ${SPOTIFY_ENV_FILE:-/opt/spotify/.env}
     volumes:
       - ${SPOTIFY_BASE_DIR:-/opt/spotify}/cache/.cache:/app/.cache
       - ${SPOTIFY_BASE_DIR:-/opt/spotify}/processed_urls.txt:/app/processed_urls.txt
+      - ${SPOTIFY_BASE_DIR:-/opt/spotify}/playlist_ids.json:/app/playlist_ids.json
     # Long-running Docker-native scheduler for environments where host cron is not desired.
+    # This is the only service that should run continuously; never start `app`
+    # (the one-shot service) at the same time as this one against the same
+    # playlist, or both will race to create it if it doesn't exist yet.
     entrypoint: ["bash", "/app/scripts/container_scheduler.sh"]
     restart: unless-stopped

@@ -64,30 +64,40 @@ python create_playlist.py \
   --skip-existing --retention-days 7 -m 300
 ```
 
-## Automate on Raspberry Pi
+## Automate on Raspberry Pi (recommended: one container)
 
-Use cron to run the Docker-based scheduler every 5 minutes. The host script keeps
-the same compose flow as the old GitHub Actions schedule, including env
-resolution, persistent file prep, diagnostics, and log parsing.
+The recommended setup is the long-running `scheduler` container: it loops
+internally and updates the playlist every hour by default
+(`SCHEDULE_INTERVAL_SECONDS=3600`), so no host cron or systemd timer is
+needed at all. It is also the only service that should ever run against a
+given playlist - `deploy/docker-compose.yml` gates `app` (one-shot) and
+`scheduler` behind separate Compose profiles specifically so a plain
+`docker compose up` can never start both at once (that double-start used to
+race both processes to create the same playlist independently, resulting in
+duplicates).
 
+### Deploy over Tailscale
+
+If your Pi is reachable via Tailscale (e.g. as `raspberrypi-1`), deploy from
+your machine with:
+
+```bash
+# .env with your Spotify credentials must exist locally first (see .env.example)
+IMAGE=ghcr.io/<owner>/<repo>:latest \
+PI_USER=pi PI_HOST=raspberrypi-1 PI_DIR=/opt/spotify \
+scripts/deploy_pi_docker.sh
 ```
-# Edit with: crontab -e
-SHELL=/bin/bash
-*/5 * * * * cd /home/pi/spotify-playlist-app && \
-  /bin/bash ./scripts/run_schedule.sh \
-  >> cron.log 2>&1
-```
 
-The script writes the latest detailed run log to `schedule_run.log`. It will
-auto-detect `IMAGE` from `origin`, or you can export `IMAGE`,
-`SPOTIFY_BASE_DIR`, and `SPOTIFY_ENV_FILE` in the crontab if you need overrides.
+This copies `deploy/docker-compose.yml` and your `.env` to the Pi, installs
+Docker if missing, and starts `docker compose up -d scheduler`. See the
+script for first-time Spotify authorization instructions (the container has
+no browser, so you authorize once via a laptop or an SSH tunnel).
 
-If you want the schedule to live inside Docker instead of on the Pi host, use
-the long-running `scheduler` service:
+### Manual equivalent
 
 ```bash
 mkdir -p /opt/spotify/cache
-touch /opt/spotify/cache/.cache /opt/spotify/processed_urls.txt
+touch /opt/spotify/cache/.cache /opt/spotify/processed_urls.txt /opt/spotify/playlist_ids.json
 
 export IMAGE=ghcr.io/<owner>/<repo>:latest
 export SPOTIFY_BASE_DIR=/opt/spotify
@@ -97,9 +107,30 @@ docker compose -f deploy/docker-compose.yml up -d scheduler
 docker compose -f deploy/docker-compose.yml logs -f scheduler
 ```
 
-This keeps a single container running and executes the update every 300 seconds
-by default. Override the interval with `SCHEDULE_INTERVAL_SECONDS=600` if you
-want a different cadence.
+Override the cadence with `SCHEDULE_INTERVAL_SECONDS=1800` if you want a
+different interval, but keep it well above a few minutes - each run makes
+several Spotify API calls per track (search + optional retention/skip
+lookups), and a short interval risks hitting rate limits.
+
+### Alternative: host cron + one-shot container
+
+If you'd rather not run a long-lived container, `scripts/run_schedule.sh`
+runs the `app` (one-shot) service once per invocation and can be driven by
+host cron instead:
+
+```
+# Edit with: crontab -e
+SHELL=/bin/bash
+0 * * * * cd /home/pi/spotify-playlist-app && \
+  /bin/bash ./scripts/run_schedule.sh \
+  >> cron.log 2>&1
+```
+
+The script writes the latest detailed run log to `schedule_run.log`. It will
+auto-detect `IMAGE` from `origin`, or you can export `IMAGE`,
+`SPOTIFY_BASE_DIR`, and `SPOTIFY_ENV_FILE` in the crontab if you need
+overrides. Do not run this alongside the `scheduler` container against the
+same playlist.
 
 If you prefer a local Python run instead of Docker, use the helper script:
 
@@ -190,10 +221,12 @@ docker run --rm \
   --env-file /path/to/.env \
   -v /path/to/cache/.cache:/app/.cache \
   -v /path/to/processed_urls.txt:/app/processed_urls.txt \
+  -v /path/to/playlist_ids.json:/app/playlist_ids.json \
   ghcr.io/<owner>/<repo>:latest \
   python -u create_playlist.py \
     --append-to-name "P3 (Updated live)" \
     --from-dr-day p3 today \
+    --playlist-id-cache playlist_ids.json \
     --image-path DRP3_logo.jpeg \
     --skip-existing --retention-days 7 -m 300
 ```
@@ -210,16 +243,16 @@ docker run --rm -p 8888:8888 \
 
 Open the URL printed by the container and complete the login once. The token is saved to the bound `/path/to/cache/.cache` file.
 
-Docker-native scheduler:
+Docker-native scheduler (hourly by default):
 
 ```bash
 mkdir -p /path/to/cache
-touch /path/to/cache/.cache /path/to/processed_urls.txt
+touch /path/to/cache/.cache /path/to/processed_urls.txt /path/to/playlist_ids.json
 
 IMAGE=ghcr.io/<owner>/<repo>:latest \
 SPOTIFY_BASE_DIR=/path/to \
 SPOTIFY_ENV_FILE=/path/to/.env \
-SCHEDULE_INTERVAL_SECONDS=300 \
+SCHEDULE_INTERVAL_SECONDS=3600 \
 docker compose -f deploy/docker-compose.yml up -d scheduler
 ```
 
@@ -239,9 +272,21 @@ docker compose -f deploy/docker-compose.yml ps
 - The script resolves free‑text queries to the top search result; provide Spotify
   track URLs/URIs for exact versions.
 - Rate limits: tracks are added in batches of 100.
+- Duplicate playlists: with `--append-to-name`, the resolved playlist ID is
+  cached to `--playlist-id-cache` (default `playlist_ids.json`) so later runs
+  reuse it directly instead of re-searching by name every time. This avoids
+  creating a new playlist if a by-name search ever misses the existing one
+  (e.g. right after a rename). Never run two update processes
+  (host cron + the `scheduler` container, or two `scheduler` containers)
+  against the same playlist at the same time - see "Automate on Raspberry Pi".
 
 ## Troubleshooting 🛠️
 
 - Redirect URI mismatch: Ensure the URI in `.env` matches your Spotify app.
 - Token/cache issues: delete `.cache` (or your `--cache` path) and retry.
 - Low track counts: add `--debug-scrape` to see per-URL extraction counts.
+- Keeps creating a new playlist every run: check `playlist_ids.json` is on a
+  persistent volume (not recreated per run) and that only one scheduler is
+  running against the playlist. Deleting `playlist_ids.json` forces a fresh
+  by-name search on the next run, which will find and reuse the existing
+  playlist if the name matches exactly.

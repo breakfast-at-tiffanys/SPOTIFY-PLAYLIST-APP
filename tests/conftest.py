@@ -27,3 +27,15 @@ def _isolate_processed_urls_file(tmp_path, monkeypatch):
     path = tmp_path / "processed_urls.txt"
     monkeypatch.setenv("PROCESSED_URLS_FILE", str(path))
     yield
+
+
+@pytest.fixture(autouse=True)
+def _isolate_playlist_id_cache_file(tmp_path, monkeypatch):
+    """Ensure tests do not write to the repo's playlist_ids.json.
+
+    Mirrors `_isolate_processed_urls_file` for the playlist ID cache used by
+    `--append-to-name`.
+    """
+    path = tmp_path / "playlist_ids.json"
+    monkeypatch.setenv("PLAYLIST_ID_CACHE_FILE", str(path))
+    yield
